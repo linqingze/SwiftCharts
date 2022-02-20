@@ -11,17 +11,19 @@ import SwiftCharts
 
 class StackedBarsExample: UIViewController {
 
-    private var chart: Chart? // arc
+    fileprivate var chart: Chart? // arc
     
     let sideSelectorHeight: CGFloat = 50
 
-    private func chart(horizontal horizontal: Bool) -> Chart {
+    fileprivate func chart(horizontal: Bool) -> Chart {
         let labelSettings = ChartLabelSettings(font: ExamplesDefaults.labelFont)
         
-        let color0 = UIColor.grayColor().colorWithAlphaComponent(0.6)
-        let color1 = UIColor.blueColor().colorWithAlphaComponent(0.6)
-        let color2 = UIColor.redColor().colorWithAlphaComponent(0.6)
-        let color3 = UIColor.greenColor().colorWithAlphaComponent(0.6)
+        let alpha: CGFloat = 0.6
+    
+        let color0 = UIColor.gray.withAlphaComponent(alpha)
+        let color1 = UIColor.blue.withAlphaComponent(alpha)
+        let color2 = UIColor.red.withAlphaComponent(alpha)
+        let color3 = UIColor.green.withAlphaComponent(alpha)
         
         let zero = ChartAxisValueDouble(0)
         let barModels = [
@@ -52,7 +54,7 @@ class StackedBarsExample: UIViewController {
         ]
         
         let (axisValues1, axisValues2) = (
-            0.stride(through: 150, by: 20).map {ChartAxisValueFloat(CGFloat($0), labelSettings: labelSettings)},
+            stride(from: 0, through: 150, by: 20).map {ChartAxisValueDouble(Double($0), labelSettings: labelSettings)},
             [ChartAxisValueString("", order: 0, labelSettings: labelSettings)] + barModels.map{$0.constant} + [ChartAxisValueString("", order: 5, labelSettings: labelSettings)]
         )
         let (xValues, yValues) = horizontal ? (axisValues1, axisValues2) : (axisValues2, axisValues1)
@@ -60,41 +62,58 @@ class StackedBarsExample: UIViewController {
         let xModel = ChartAxisModel(axisValues: xValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings))
         let yModel = ChartAxisModel(axisValues: yValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical()))
         
-        let frame = ExamplesDefaults.chartFrame(self.view.bounds)
-        let chartFrame = self.chart?.frame ?? CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, frame.size.height - sideSelectorHeight)
-        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: ExamplesDefaults.chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
-        let (xAxis, yAxis, innerFrame) = (coordsSpace.xAxis, coordsSpace.yAxis, coordsSpace.chartInnerFrame)
+        let frame = ExamplesDefaults.chartFrame(view.bounds)
+        let chartFrame = chart?.frame ?? CGRect(x: frame.origin.x, y: frame.origin.y, width: frame.size.width, height: frame.size.height - sideSelectorHeight)
         
-        let chartStackedBarsLayer = ChartStackedBarsLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, barModels: barModels, horizontal: horizontal, barWidth: 40, animDuration: 0.5)
+        let chartSettings = ExamplesDefaults.chartSettingsWithPanZoom
+
+        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
+        let (xAxisLayer, yAxisLayer, innerFrame) = (coordsSpace.xAxisLayer, coordsSpace.yAxisLayer, coordsSpace.chartInnerFrame)
         
-        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.blackColor(), linesWidth: ExamplesDefaults.guidelinesWidth)
-        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, settings: settings)
+        let barViewSettings = ChartBarViewSettings(animDuration: 0.5)
+        let chartStackedBarsLayer = ChartStackedBarsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, innerFrame: innerFrame, barModels: barModels, horizontal: horizontal, barWidth: 40, settings: barViewSettings, stackFrameSelectionViewUpdater: ChartViewSelectorAlpha(selectedAlpha: 1, deselectedAlpha: alpha)) {tappedBar in
+            
+            guard let stackFrameData = tappedBar.stackFrameData else {return}
+            
+            let chartViewPoint = tappedBar.layer.contentToGlobalCoordinates(CGPoint(x: tappedBar.barView.frame.midX, y: stackFrameData.stackedItemViewFrameRelativeToBarParent.minY))!
+            let viewPoint = CGPoint(x: chartViewPoint.x, y: chartViewPoint.y + 70)
+            let infoBubble = InfoBubble(point: viewPoint, preferredSize: CGSize(width: 50, height: 40), superview: self.view, text: "\(stackFrameData.stackedItemModel.quantity)", font: ExamplesDefaults.labelFont, textColor: UIColor.white, bgColor: UIColor.black)
+            infoBubble.tapHandler = {
+                infoBubble.removeFromSuperview()
+            }
+            self.view.addSubview(infoBubble)
+        }
+        
+        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.black, linesWidth: ExamplesDefaults.guidelinesWidth)
+        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, settings: settings)
         
         return Chart(
             frame: chartFrame,
+            innerFrame: innerFrame,
+            settings: chartSettings,
             layers: [
-                xAxis,
-                yAxis,
+                xAxisLayer,
+                yAxisLayer,
                 guidelinesLayer,
                 chartStackedBarsLayer
             ]
         )
     }
     
-    private func showChart(horizontal horizontal: Bool) {
+    fileprivate func showChart(horizontal: Bool) {
         self.chart?.clearView()
         
         let chart = self.chart(horizontal: horizontal)
-        self.view.addSubview(chart.view)
+        view.addSubview(chart.view)
         self.chart = chart
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.showChart(horizontal: true)
-        if let chart = self.chart {
-            let sideSelector = DirSelector(frame: CGRectMake(0, chart.frame.origin.y + chart.frame.size.height, self.view.frame.size.width, self.sideSelectorHeight), controller: self)
-            self.view.addSubview(sideSelector)
+        showChart(horizontal: true)
+        if let chart = chart {
+            let sideSelector = DirSelector(frame: CGRect(x: 0, y: chart.frame.origin.y + chart.frame.size.height, width: view.frame.size.width, height: sideSelectorHeight), controller: self)
+            view.addSubview(sideSelector)
         }
     }
     
@@ -105,49 +124,49 @@ class StackedBarsExample: UIViewController {
         
         weak var controller: StackedBarsExample?
         
-        private let buttonDirs: [UIButton : Bool]
+        fileprivate let buttonDirs: [UIButton : Bool]
         
         init(frame: CGRect, controller: StackedBarsExample) {
             
             self.controller = controller
             
             self.horizontal = UIButton()
-            self.horizontal.setTitle("Horizontal", forState: .Normal)
+            self.horizontal.setTitle("Horizontal", for: UIControl.State())
             self.vertical = UIButton()
-            self.vertical.setTitle("Vertical", forState: .Normal)
+            self.vertical.setTitle("Vertical", for: UIControl.State())
             
-            self.buttonDirs = [self.horizontal : true, self.vertical : false]
+            self.buttonDirs = [horizontal: true, vertical: false]
             
             super.init(frame: frame)
             
-            self.addSubview(self.horizontal)
-            self.addSubview(self.vertical)
+            addSubview(horizontal)
+            addSubview(vertical)
             
-            for button in [self.horizontal, self.vertical] {
+            for button in [horizontal, vertical] {
                 button.titleLabel?.font = ExamplesDefaults.fontWithSize(14)
-                button.setTitleColor(UIColor.blueColor(), forState: .Normal)
-                button.addTarget(self, action: "buttonTapped:", forControlEvents: .TouchUpInside)
+                button.setTitleColor(UIColor.blue, for: UIControl.State())
+                button.addTarget(self, action: #selector(DirSelector.buttonTapped(_:)), for: .touchUpInside)
             }
         }
         
-        func buttonTapped(sender: UIButton) {
+        @objc func buttonTapped(_ sender: UIButton) {
             let horizontal = sender == self.horizontal ? true : false
             controller?.showChart(horizontal: horizontal)
         }
         
         override func didMoveToSuperview() {
-            let views = [self.horizontal, self.vertical]
+            let views = [horizontal, vertical]
             for v in views {
                 v.translatesAutoresizingMaskIntoConstraints = false
             }
             
-            let namedViews = views.enumerate().map{index, view in
+            let namedViews = views.enumerated().map{index, view in
                 ("v\(index)", view)
             }
             
-            let viewsDict = namedViews.reduce(Dictionary<String, UIView>()) {(var u, tuple) in
-                u[tuple.0] = tuple.1
-                return u
+            var viewsDict = Dictionary<String, UIView>()
+            for namedView in namedViews {
+                viewsDict[namedView.0] = namedView.1
             }
             
             let buttonsSpace: CGFloat = Env.iPad ? 20 : 10
@@ -156,9 +175,9 @@ class StackedBarsExample: UIViewController {
                 "\(str)-(\(buttonsSpace))-[\(tuple.0)]"
             }
             
-            let vConstraits = namedViews.flatMap {NSLayoutConstraint.constraintsWithVisualFormat("V:|[\($0.0)]", options: NSLayoutFormatOptions(), metrics: nil, views: viewsDict)}
+            let vConstraits = namedViews.flatMap {NSLayoutConstraint.constraints(withVisualFormat: "V:|[\($0.0)]", options: NSLayoutConstraint.FormatOptions(), metrics: nil, views: viewsDict)}
             
-            self.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat(hConstraintStr, options: NSLayoutFormatOptions(), metrics: nil, views: viewsDict)
+            addConstraints(NSLayoutConstraint.constraints(withVisualFormat: hConstraintStr, options: NSLayoutConstraint.FormatOptions(), metrics: nil, views: viewsDict)
                 + vConstraits)
         }
         

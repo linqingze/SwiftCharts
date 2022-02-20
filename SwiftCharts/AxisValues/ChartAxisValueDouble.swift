@@ -8,38 +8,32 @@
 
 import UIKit
 
-public class ChartAxisValueDouble: ChartAxisValue {
+open class ChartAxisValueDouble: ChartAxisValue {
     
-    public let formatter: NSNumberFormatter
-    let labelSettings: ChartLabelSettings
-    
-    override public var text: String {
-        return self.formatter.stringFromNumber(self.scalar)!
-    }
+    public let formatter: NumberFormatter
 
-    public convenience init(_ int: Int, formatter: NSNumberFormatter = ChartAxisValueDouble.defaultFormatter, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
+    public convenience init(_ int: Int, formatter: NumberFormatter = ChartAxisValueDouble.defaultFormatter, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
         self.init(Double(int), formatter: formatter, labelSettings: labelSettings)
     }
     
-    public init(_ double: Double, formatter: NSNumberFormatter = ChartAxisValueDouble.defaultFormatter, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
+    public init(_ double: Double, formatter: NumberFormatter = ChartAxisValueDouble.defaultFormatter, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
         self.formatter = formatter
-        self.labelSettings = labelSettings
-        super.init(scalar: double)
+        super.init(scalar: double, labelSettings: labelSettings)
     }
     
-    override public var labels: [ChartAxisLabel] {
-        let axisLabel = ChartAxisLabel(text: self.text, settings: self.labelSettings)
-        return [axisLabel]
+    override open func copy(_ scalar: Double) -> ChartAxisValueDouble {
+        return ChartAxisValueDouble(scalar, formatter: formatter, labelSettings: labelSettings)
     }
     
-    
-    override public func copy(scalar: Double) -> ChartAxisValueDouble {
-        return ChartAxisValueDouble(scalar, formatter: self.formatter, labelSettings: self.labelSettings)
-    }
-    
-    static var defaultFormatter: NSNumberFormatter = {
-        let formatter = NSNumberFormatter()
+    public static var defaultFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
         formatter.maximumFractionDigits = 2
         return formatter
     }()
+
+    // MARK: CustomStringConvertible
+
+    override open var description: String {
+        return formatter.string(from: NSNumber(value: scalar))!
+    }
 }

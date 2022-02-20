@@ -11,7 +11,7 @@ import SwiftCharts
 
 class NotNumericExample: UIViewController {
 
-    private var chart: Chart? // arc
+    fileprivate var chart: Chart? // arc
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,8 +32,8 @@ class NotNumericExample: UIViewController {
         let item4 = MyItem(name: "Cereals", quantity: quantityLow)
         
         
-        let chartPoints: [ChartPoint] = [item0, item1, item2, item3, item4].enumerate().map {index, item in
-            let xLabelSettings = ChartLabelSettings(font: ExamplesDefaults.labelFont, rotation: 45, rotationKeep: .Top)
+        let chartPoints: [ChartPoint] = [item0, item1, item2, item3, item4].enumerated().map {index, item in
+            let xLabelSettings = ChartLabelSettings(font: ExamplesDefaults.labelFont, rotation: 45, rotationKeep: .top)
             let x = ChartAxisValueString(item.name, order: index, labelSettings: xLabelSettings)
             let y = ChartAxisValueString(item.quantity.text, order: item.quantity.number, labelSettings: labelSettings)
             return ChartPoint(x: x, y: y)
@@ -41,7 +41,7 @@ class NotNumericExample: UIViewController {
         
         let xValues = [ChartAxisValueString("", order: -1)] + chartPoints.map{$0.x} + [ChartAxisValueString("", order: 5)]
         
-        func toYValue(quantity: MyQuantity) -> ChartAxisValue {
+        func toYValue(_ quantity: MyQuantity) -> ChartAxisValue {
             return ChartAxisValueString(quantity.text, order: quantity.number, labelSettings: labelSettings)
         }
         
@@ -49,41 +49,47 @@ class NotNumericExample: UIViewController {
         
         let xModel = ChartAxisModel(axisValues: xValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings))
         let yModel = ChartAxisModel(axisValues: yValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical()))
-        let chartFrame = ExamplesDefaults.chartFrame(self.view.bounds)
-        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: ExamplesDefaults.chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
-        let (xAxis, yAxis, innerFrame) = (coordsSpace.xAxis, coordsSpace.yAxis, coordsSpace.chartInnerFrame)
+        let chartFrame = ExamplesDefaults.chartFrame(view.bounds)
+        
+        let chartSettings = ExamplesDefaults.chartSettingsWithPanZoom
+
+        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
+        let (xAxisLayer, yAxisLayer, innerFrame) = (coordsSpace.xAxisLayer, coordsSpace.yAxisLayer, coordsSpace.chartInnerFrame)
         
         let minBarSpacing: CGFloat = ExamplesDefaults.minBarSpacing + 16
 
         let generator = {(chartPointModel: ChartPointLayerModel, layer: ChartPointsLayer, chart: Chart) -> UIView? in
-            let bottomLeft = CGPointMake(layer.innerFrame.origin.x, layer.innerFrame.origin.y + layer.innerFrame.height)
+            let bottomLeft = layer.modelLocToScreenLoc(x: -1, y: 0)
             
             let barWidth = layer.minXScreenSpace - minBarSpacing
             
-            let (p1, p2): (CGPoint, CGPoint) = (CGPointMake(chartPointModel.screenLoc.x, bottomLeft.y), CGPointMake(chartPointModel.screenLoc.x, chartPointModel.screenLoc.y))
-            return ChartPointViewBar(p1: p1, p2: p2, width: barWidth, bgColor: UIColor.blueColor().colorWithAlphaComponent(0.6))
+            let barViewSettings = ChartBarViewSettings(animDuration: 0.5)
+            let (p1, p2): (CGPoint, CGPoint) = (CGPoint(x: chartPointModel.screenLoc.x, y: bottomLeft.y), CGPoint(x: chartPointModel.screenLoc.x, y: chartPointModel.screenLoc.y))
+            return ChartPointViewBar(p1: p1, p2: p2, width: barWidth, bgColor: UIColor.blue.withAlphaComponent(0.6), settings: barViewSettings)
         }
         
-        let chartPointsLayer = ChartPointsViewsLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: chartPoints, viewGenerator: generator)
+        let chartPointsLayer = ChartPointsViewsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: chartPoints, viewGenerator: generator)
         
-        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.blackColor(), linesWidth: ExamplesDefaults.guidelinesWidth)
-        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, settings: settings)
+        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.black, linesWidth: ExamplesDefaults.guidelinesWidth)
+        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, settings: settings)
         
-        let dividersSettings =  ChartDividersLayerSettings(linesColor: UIColor.blackColor(), linesWidth: Env.iPad ? 1 : 0.2, start: Env.iPad ? 7 : 3, end: 0, onlyVisibleValues: true)
-        let dividersLayer = ChartDividersLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, settings: dividersSettings)
+        let dividersSettings =  ChartDividersLayerSettings(linesColor: UIColor.black, linesWidth: Env.iPad ? 1 : 0.2, start: Env.iPad ? 7 : 3, end: 0)
+        let dividersLayer = ChartDividersLayer(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, settings: dividersSettings)
         
         let chart = Chart(
             frame: chartFrame,
+            innerFrame: innerFrame,
+            settings: chartSettings,
             layers: [
-                xAxis,
-                yAxis,
+                xAxisLayer,
+                yAxisLayer,
                 guidelinesLayer,
                 dividersLayer,
                 chartPointsLayer
             ]
         )
         
-        self.view.addSubview(chart.view)
+        view.addSubview(chart.view)
         self.chart = chart
     }
 }

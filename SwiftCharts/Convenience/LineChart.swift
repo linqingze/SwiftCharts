@@ -8,7 +8,7 @@
 
 import UIKit
 
-public class LineChart: Chart {
+open class LineChart: Chart {
     
     public typealias ChartLine = (chartPoints: [(Double, Double)], color: UIColor)
     
@@ -20,13 +20,13 @@ public class LineChart: Chart {
     // Initializer for multiple lines
     public init(frame: CGRect, chartConfig: ChartConfigXY, xTitle: String, yTitle: String, lines: [ChartLine]) {
         
-        let xValues = chartConfig.xAxisConfig.from.stride(through: chartConfig.xAxisConfig.to, by: chartConfig.xAxisConfig.by).map{ChartAxisValueDouble($0)}
-        let yValues = chartConfig.yAxisConfig.from.stride(through: chartConfig.yAxisConfig.to, by: chartConfig.yAxisConfig.by).map{ChartAxisValueDouble($0)}
+        let xValues = stride(from: chartConfig.xAxisConfig.from, through: chartConfig.xAxisConfig.to, by: chartConfig.xAxisConfig.by).map{ChartAxisValueDouble($0)}
+        let yValues = stride(from: chartConfig.yAxisConfig.from, through: chartConfig.yAxisConfig.to, by: chartConfig.yAxisConfig.by).map{ChartAxisValueDouble($0)}
         
         let xModel = ChartAxisModel(axisValues: xValues, axisTitleLabel: ChartAxisLabel(text: xTitle, settings: chartConfig.xAxisLabelSettings))
         let yModel = ChartAxisModel(axisValues: yValues, axisTitleLabel: ChartAxisLabel(text: yTitle, settings: chartConfig.yAxisLabelSettings.defaultVertical()))
         let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: chartConfig.chartSettings, chartFrame: frame, xModel: xModel, yModel: yModel)
-        let (xAxis, yAxis, innerFrame) = (coordsSpace.xAxis, coordsSpace.yAxis, coordsSpace.chartInnerFrame)
+        let (xAxisLayer, yAxisLayer, innerFrame) = (coordsSpace.xAxisLayer, coordsSpace.yAxisLayer, coordsSpace.chartInnerFrame)
         
         let lineLayers: [ChartLayer] = lines.map {line in
             let chartPoints = line.chartPoints.map {chartPointScalar in
@@ -34,16 +34,18 @@ public class LineChart: Chart {
             }
             
             let lineModel = ChartLineModel(chartPoints: chartPoints, lineColor: line.color, animDuration: 0.5, animDelay: 0)
-            return ChartPointsLineLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, lineModels: [lineModel])
+            return ChartPointsLineLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, lineModels: [lineModel])
         }
         
-        let guidelinesLayer = GuidelinesDefaultLayerGenerator.generateOpt(xAxis: xAxis, yAxis: yAxis, chartInnerFrame: innerFrame, guidelinesConfig: chartConfig.guidelinesConfig)
+        let guidelinesLayer = GuidelinesDefaultLayerGenerator.generateOpt(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, guidelinesConfig: chartConfig.guidelinesConfig)
         
         let view = ChartBaseView(frame: frame)
-        let layers: [ChartLayer] = [xAxis, yAxis] + (guidelinesLayer.map{[$0]} ?? []) + lineLayers
+        let layers: [ChartLayer] = [xAxisLayer, yAxisLayer] + (guidelinesLayer.map{[$0]} ?? []) + lineLayers
         
         super.init(
             view: view,
+            innerFrame: innerFrame,
+            settings: chartConfig.chartSettings,
             layers: layers
         )
     }

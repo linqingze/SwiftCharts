@@ -11,7 +11,7 @@ import SwiftCharts
 
 class MultipleLabelsExample: UIViewController {
 
-    private var chart: Chart? // arc
+    fileprivate var chart: Chart? // arc
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,41 +26,43 @@ class MultipleLabelsExample: UIViewController {
         let chartPoints = [cp1, cp2, cp3, cp4]
         
         let xValues = chartPoints.map{$0.x}
-        let yValues = ChartAxisValuesGenerator.generateYAxisValuesWithChartPoints(chartPoints, minSegmentCount: 10, maxSegmentCount: 20, multiple: 2, axisValueGenerator: {ChartAxisValueDouble($0, labelSettings: labelSettings)}, addPaddingSegmentIfEdge: false)
+        let yValues = ChartAxisValuesStaticGenerator.generateYAxisValuesWithChartPoints(chartPoints, minSegmentCount: 10, maxSegmentCount: 20, multiple: 2, axisValueGenerator: {ChartAxisValueDouble($0, labelSettings: labelSettings)}, addPaddingSegmentIfEdge: false)
         
         let xModel = ChartAxisModel(axisValues: xValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings))
         let yModel = ChartAxisModel(axisValues: yValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical()))
-        let chartFrame = ExamplesDefaults.chartFrame(self.view.bounds)
-        let chartSettings = ExamplesDefaults.chartSettings
+        let chartFrame = ExamplesDefaults.chartFrame(view.bounds)
+        var chartSettings = ExamplesDefaults.chartSettingsWithPanZoom
         chartSettings.trailing = 20
         let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
-        let (xAxis, yAxis, innerFrame) = (coordsSpace.xAxis, coordsSpace.yAxis, coordsSpace.chartInnerFrame)
+        let (xAxisLayer, yAxisLayer, innerFrame) = (coordsSpace.xAxisLayer, coordsSpace.yAxisLayer, coordsSpace.chartInnerFrame)
     
-        let lineModel = ChartLineModel(chartPoints: chartPoints, lineColor: UIColor.redColor(), lineWidth: 1, animDuration: 1, animDelay: 0)
-        let chartPointsLineLayer = ChartPointsLineLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, lineModels: [lineModel])
+        let lineModel = ChartLineModel(chartPoints: chartPoints, lineColor: UIColor.red, lineWidth: 1, animDuration: 1, animDelay: 0)
+        let chartPointsLineLayer = ChartPointsLineLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, lineModels: [lineModel])
         
-        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.blackColor(), linesWidth: ExamplesDefaults.guidelinesWidth)
-        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, settings: settings)
+        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.black, linesWidth: ExamplesDefaults.guidelinesWidth)
+        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, settings: settings)
         
         let chart = Chart(
             frame: chartFrame,
+            innerFrame: innerFrame,
+            settings: chartSettings,
             layers: [
-                xAxis,
-                yAxis,
+                xAxisLayer,
+                yAxisLayer,
                 guidelinesLayer,
                 chartPointsLineLayer
             ]
         )
         
-        self.view.addSubview(chart.view)
+        view.addSubview(chart.view)
         self.chart = chart
     }
 }
 
 private class MyMultiLabelAxisValue: ChartAxisValue {
     
-    private let myVal: Int
-    private let derivedVal: Double
+    fileprivate let myVal: Int
+    fileprivate let derivedVal: Double
     
     init(myVal: Int) {
         self.myVal = myVal
@@ -70,9 +72,9 @@ private class MyMultiLabelAxisValue: ChartAxisValue {
     
     override var labels:[ChartAxisLabel] {
         return [
-            ChartAxisLabel(text: "\(self.myVal)", settings: ChartLabelSettings(font: UIFont.systemFontOfSize(18), fontColor: UIColor.blackColor())),
-            ChartAxisLabel(text: "blabla", settings: ChartLabelSettings(font: UIFont.systemFontOfSize(10), fontColor: UIColor.blueColor())),
-            ChartAxisLabel(text: "\(self.derivedVal)", settings: ChartLabelSettings(font: UIFont.systemFontOfSize(14), fontColor: UIColor.purpleColor()))
+            ChartAxisLabel(text: "\(myVal)", settings: ChartLabelSettings(font: UIFont.systemFont(ofSize: 18), fontColor: UIColor.black)),
+            ChartAxisLabel(text: "blabla", settings: ChartLabelSettings(font: UIFont.systemFont(ofSize: 10), fontColor: UIColor.blue)),
+            ChartAxisLabel(text: "\(derivedVal)", settings: ChartLabelSettings(font: UIFont.systemFont(ofSize: 14), fontColor: UIColor.purple))
         ]
     }
 }

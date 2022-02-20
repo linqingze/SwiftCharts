@@ -11,72 +11,75 @@ import UIKit
 public struct ChartDividersLayerSettings {
     let linesColor: UIColor
     let linesWidth: CGFloat
-    let start: CGFloat // points from start to axis, axis is 0
-    let end: CGFloat // points from axis to end, axis is 0
-    let onlyVisibleValues: Bool
+    let start: CGFloat // Points from start to axis, axis is 0
+    let end: CGFloat // Points from axis to end, axis is 0
+    let show: ((Double) -> Bool)? // Set visibility of individual axis values. If nil, all axis values will be shown.
     
-    public init(linesColor: UIColor = UIColor.grayColor(), linesWidth: CGFloat = 0.3, start: CGFloat = 5, end: CGFloat = 5, onlyVisibleValues: Bool = false) {
+    public init(linesColor: UIColor = UIColor.gray, linesWidth: CGFloat = 0.3, start: CGFloat = 5, end: CGFloat = 5, show: ((Double) -> Bool)? = nil) {
         self.linesColor = linesColor
         self.linesWidth = linesWidth
         self.start = start
         self.end = end
-        self.onlyVisibleValues = onlyVisibleValues
+        self.show = show
     }
 }
 
 public enum ChartDividersLayerAxis {
-    case X, Y, XAndY
+    case x, y, xAndY
 }
 
-public class ChartDividersLayer: ChartCoordsSpaceLayer {
+open class ChartDividersLayer: ChartCoordsSpaceLayer {
     
-    private let settings: ChartDividersLayerSettings
-    
-    private let xScreenLocs: [CGFloat]
-    private let yScreenLocs: [CGFloat]
+    fileprivate let settings: ChartDividersLayerSettings
     
     let axis: ChartDividersLayerAxis
 
-    public init(xAxis: ChartAxisLayer, yAxis: ChartAxisLayer, innerFrame: CGRect, axis: ChartDividersLayerAxis = .XAndY, settings: ChartDividersLayerSettings) {
+    fileprivate let xAxisLayer: ChartAxisLayer
+    fileprivate let yAxisLayer: ChartAxisLayer
+    
+    public init(xAxisLayer: ChartAxisLayer, yAxisLayer: ChartAxisLayer, axis: ChartDividersLayerAxis = .xAndY, settings: ChartDividersLayerSettings) {
         self.axis = axis
         self.settings = settings
         
-        func screenLocs(axisLayer: ChartAxisLayer) -> [CGFloat] {
-            let values = settings.onlyVisibleValues ? axisLayer.axisValues.filter{!$0.hidden} : axisLayer.axisValues
-            return values.map{axisLayer.screenLocForScalar($0.scalar)}
-        }
-        
-        self.xScreenLocs = screenLocs(xAxis)
-        self.yScreenLocs = screenLocs(yAxis)
-        
-        super.init(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame)
+        self.xAxisLayer = xAxisLayer
+        self.yAxisLayer = yAxisLayer
+
+        super.init(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis)
     }
     
-    private func drawLine(context context: CGContextRef, color: UIColor, width: CGFloat, p1: CGPoint, p2: CGPoint) {
+    fileprivate func drawLine(context: CGContext, color: UIColor, width: CGFloat, p1: CGPoint, p2: CGPoint) {
         ChartDrawLine(context: context, p1: p1, p2: p2, width: width, color: color)
     }
     
-    override public func chartViewDrawing(context context: CGContextRef, chart: Chart) {
-        let xScreenLocs = self.xScreenLocs
-        let yScreenLocs = self.yScreenLocs
+    override open func chartViewDrawing(context: CGContext, chart: Chart) {
+        let xValues = xAxisLayer.currentAxisValues
+        let yValues = yAxisLayer.currentAxisValues
         
-        if self.axis == .X || self.axis == .XAndY {
-            for xScreenLoc in xScreenLocs {
+        if axis == .x || axis == .xAndY {
+            for xValue in xValues {
+                guard (settings.show?(xValue) ?? true) else {continue}
+                
+                let xScreenLoc = xAxisLayer.axis.screenLocForScalar(xValue)
+                
                 let x1 = xScreenLoc
-                let y1 = self.xAxis.lineP1.y + (self.xAxis.low ? -self.settings.end : self.settings.end)
+                let y1 = xAxisLayer.lineP1.y + (xAxisLayer.low ? -settings.end : settings.end)
                 let x2 = xScreenLoc
-                let y2 = self.xAxis.lineP1.y + (self.xAxis.low ? self.settings.start : -self.settings.end)
-                self.drawLine(context: context, color: self.settings.linesColor, width: self.settings.linesWidth, p1: CGPointMake(x1, y1), p2: CGPointMake(x2, y2))
+                let y2 = xAxisLayer.lineP1.y + (xAxisLayer.low ? settings.start : -settings.start)
+                drawLine(context: context, color: settings.linesColor, width: settings.linesWidth, p1: CGPoint(x: x1, y: y1), p2: CGPoint(x: x2, y: y2))
             }
         }
         
-        if self.axis == .Y || self.axis == .XAndY {
-            for yScreenLoc in yScreenLocs {
-                let x1 = self.yAxis.lineP1.x + (self.yAxis.low ? -self.settings.start : self.settings.start)
+        if axis == .y || axis == .xAndY {
+            for yValue in yValues {
+                guard (settings.show?(yValue) ?? true) else {continue}
+                
+                let yScreenLoc = yAxisLayer.axis.screenLocForScalar(yValue)
+                
+                let x1 = yAxisLayer.lineP1.x + (yAxisLayer.low ? -settings.start : settings.start)
                 let y1 = yScreenLoc
-                let x2 = self.yAxis.lineP1.x + (self.yAxis.low ? self.settings.end : self.settings.end)
+                let x2 = yAxisLayer.lineP1.x + (yAxisLayer.low ? settings.end : settings.end)
                 let y2 = yScreenLoc
-                self.drawLine(context: context, color: self.settings.linesColor, width: self.settings.linesWidth, p1: CGPointMake(x1, y1), p2: CGPointMake(x2, y2))
+                drawLine(context: context, color: settings.linesColor, width: settings.linesWidth, p1: CGPoint(x: x1, y: y1), p2: CGPoint(x: x2, y: y2))
             }
         }
     }

@@ -11,20 +11,20 @@ import SwiftCharts
 
 class ConvenienceBarsExample: UIViewController {
     
-    private var chart: Chart? // arc
+    fileprivate var chart: Chart? // arc
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         let chartConfig = BarsChartConfig(
-            chartSettings: ExamplesDefaults.chartSettings,
+            chartSettings: ExamplesDefaults.chartSettingsWithPanZoom,
             valsAxisConfig: ChartAxisConfig(from: 0, to: 8, by: 2),
             xAxisLabelSettings: ExamplesDefaults.labelSettings,
             yAxisLabelSettings: ExamplesDefaults.labelSettings.defaultVertical()
         )
         
         let chart = BarsChart(
-            frame: ExamplesDefaults.chartFrame(self.view.bounds),
+            frame: ExamplesDefaults.chartFrame(view.bounds),
             chartConfig: chartConfig,
             xTitle: "X axis",
             yTitle: "Y axis",
@@ -36,11 +36,11 @@ class ConvenienceBarsExample: UIViewController {
                 ("E", 6.8),
                 ("F", 0.5)
             ],
-            color: UIColor.redColor(),
+            color: UIColor.red,
             barWidth: Env.iPad ? 40 : 20
         )
         
-        self.view.addSubview(chart.view)
+        view.addSubview(chart.view)
         self.chart = chart
     }
 }

@@ -8,7 +8,7 @@
 
 import UIKit
 
-public class ChartPoint: Equatable {
+open class ChartPoint: Hashable, Equatable, CustomStringConvertible {
     
     public let x: ChartAxisValue
     public let y: ChartAxisValue
@@ -18,8 +18,13 @@ public class ChartPoint: Equatable {
         self.y = y
     }
     
-    public var text: String {
-        return "\(self.x.text), \(self.y.text)"
+    open var description: String {
+        return "\(x), \(y)"
+    }
+    
+    open func hash(into hasher: inout Hasher) {
+        let hash = 31 &* x.hashValue &+ y.hashValue
+        hasher.combine(hash)
     }
 }
 

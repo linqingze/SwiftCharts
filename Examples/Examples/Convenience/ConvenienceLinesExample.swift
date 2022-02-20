@@ -11,13 +11,13 @@ import SwiftCharts
 
 class ConvenienceLinesExample: UIViewController {
     
-    private var chart: Chart? // arc
+    fileprivate var chart: Chart? // arc
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         let chartConfig = ChartConfigXY(
-            chartSettings: ExamplesDefaults.chartSettings,
+            chartSettings: ExamplesDefaults.chartSettingsWithPanZoom,
             xAxisConfig: ChartAxisConfig(from: 2, to: 14, by: 2),
             yAxisConfig: ChartAxisConfig(from: 0, to: 14, by: 2),
             xAxisLabelSettings: ExamplesDefaults.labelSettings,
@@ -25,17 +25,17 @@ class ConvenienceLinesExample: UIViewController {
         )
         
         let chart = LineChart(
-            frame: ExamplesDefaults.chartFrame(self.view.bounds),
+            frame: ExamplesDefaults.chartFrame(view.bounds),
             chartConfig: chartConfig,
             xTitle: "X axis",
             yTitle: "Y axis",
             lines: [
-                (chartPoints: [(2.0, 10.6), (4.2, 5.1), (7.3, 3.0), (8.1, 5.5), (14.0, 8.0)], color: UIColor.redColor()),
-                (chartPoints: [(2.0, 2.6), (4.2, 4.1), (7.3, 1.0), (8.1, 11.5), (14.0, 3.0)], color: UIColor.blueColor())
+                (chartPoints: [(2.0, 10.6), (4.2, 5.1), (7.3, 3.0), (8.1, 5.5), (14.0, 8.0)], color: UIColor.red),
+                (chartPoints: [(2.0, 2.6), (4.2, 4.1), (7.3, 1.0), (8.1, 11.5), (14.0, 3.0)], color: UIColor.blue)
             ]
         )
         
-        self.view.addSubview(chart.view)
+        view.addSubview(chart.view)
         self.chart = chart
     }
 }

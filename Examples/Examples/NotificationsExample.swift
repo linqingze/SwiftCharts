@@ -11,7 +11,7 @@ import SwiftCharts
 
 class NotificationsExample: UIViewController {
 
-    private var chart: Chart? // arc
+    fileprivate var chart: Chart? // arc
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,31 +21,34 @@ class NotificationsExample: UIViewController {
         let chartPoints: [ChartPoint] = [(1, 3), (2, 4), (4, 1), (5, 6), (6, 4), (7, 9), (8, 0), (10, 4), (12, 2)].map{ChartPoint(x: ChartAxisValueInt($0.0, labelSettings: labelSettings), y: ChartAxisValueInt($0.1))}
         
         let xValues = chartPoints.map{$0.x}
-        let yValues = ChartAxisValuesGenerator.generateYAxisValuesWithChartPoints(chartPoints, minSegmentCount: 10, maxSegmentCount: 20, multiple: 2, axisValueGenerator: {ChartAxisValueDouble($0, labelSettings: labelSettings)}, addPaddingSegmentIfEdge: false)
+        let yValues = ChartAxisValuesStaticGenerator.generateYAxisValuesWithChartPoints(chartPoints, minSegmentCount: 10, maxSegmentCount: 20, multiple: 2, axisValueGenerator: {ChartAxisValueDouble($0, labelSettings: labelSettings)}, addPaddingSegmentIfEdge: false)
         
-        let lineModel = ChartLineModel(chartPoints: chartPoints, lineColor: UIColor.redColor(), animDuration: 1, animDelay: 0)
+        let lineModel = ChartLineModel(chartPoints: chartPoints, lineColor: UIColor.red, animDuration: 1, animDelay: 0)
+        
+        let notificationViewWidth: CGFloat = Env.iPad ? 30 : 20
+        let notificationViewHeight: CGFloat = Env.iPad ? 30 : 20
         
         let notificationGenerator = {[weak self] (chartPointModel: ChartPointLayerModel, layer: ChartPointsLayer, chart: Chart) -> UIView? in
             let (chartPoint, screenLoc) = (chartPointModel.chartPoint, chartPointModel.screenLoc)
+            
             if chartPoint.y.scalar <= 1 {
-                let w: CGFloat = Env.iPad ? 30 : 20
-                let h: CGFloat = Env.iPad ? 30 : 20
-                let chartPointView = HandlingView(frame: CGRectMake(screenLoc.x + 5, screenLoc.y - h - 5, w, h))
+
+                let chartPointView = HandlingView(frame: CGRect(x: screenLoc.x + 5, y: screenLoc.y - notificationViewHeight - 5, width: notificationViewWidth, height: notificationViewHeight))
                 let label = UILabel(frame: chartPointView.bounds)
                 label.layer.cornerRadius = Env.iPad ? 15 : 10
                 label.clipsToBounds = true
-                label.backgroundColor = UIColor.redColor()
-                label.textColor = UIColor.whiteColor()
-                label.textAlignment = NSTextAlignment.Center
-                label.font = UIFont.boldSystemFontOfSize(Env.iPad ? 22 : 18)
+                label.backgroundColor = UIColor.red
+                label.textColor = UIColor.white
+                label.textAlignment = NSTextAlignment.center
+                label.font = UIFont.boldSystemFont(ofSize: Env.iPad ? 22 : 18)
                 label.text = "!"
                 chartPointView.addSubview(label)
-                label.transform = CGAffineTransformMakeScale(0, 0)
+                label.transform = CGAffineTransform(scaleX: 0, y: 0)
                 
                 chartPointView.movedToSuperViewHandler = {
-                    UIView.animateWithDuration(0.5, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0, options: UIViewAnimationOptions(), animations: {() -> Void in
-                        label.transform = CGAffineTransformMakeScale(1, 1)
-                        }, completion: {(Bool) -> Void in})
+                    UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0, options: UIView.AnimationOptions(), animations: {
+                        label.transform = CGAffineTransform(scaleX: 1, y: 1)
+                    }, completion: nil)
                 }
                 
                 chartPointView.touchHandler = {
@@ -55,15 +58,15 @@ class NotificationsExample: UIViewController {
                     let ok = "Ok"
                     
                         if #available(iOS 8.0, *) {
-                            let alert = UIAlertController(title: title, message: message, preferredStyle: UIAlertControllerStyle.Alert)
-                            alert.addAction(UIAlertAction(title: ok, style: UIAlertActionStyle.Default, handler: nil))
-                            self!.presentViewController(alert, animated: true, completion: nil)
+                            let alert = UIAlertController(title: title, message: message, preferredStyle: UIAlertController.Style.alert)
+                            alert.addAction(UIAlertAction(title: ok, style: UIAlertAction.Style.default, handler: nil))
+                            self!.present(alert, animated: true, completion: nil)
 
                         } else {
                             let alert = UIAlertView()
                             alert.title = title
                             alert.message = message
-                            alert.addButtonWithTitle(ok)
+                            alert.addButton(withTitle: ok)
                             alert.show()
                         }
                 }
@@ -75,28 +78,38 @@ class NotificationsExample: UIViewController {
         
         let xModel = ChartAxisModel(axisValues: xValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings))
         let yModel = ChartAxisModel(axisValues: yValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical()))
-        let chartFrame = ExamplesDefaults.chartFrame(self.view.bounds)
-        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: ExamplesDefaults.chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
-        let (xAxis, yAxis, innerFrame) = (coordsSpace.xAxis, coordsSpace.yAxis, coordsSpace.chartInnerFrame)
+        let chartFrame = ExamplesDefaults.chartFrame(view.bounds)
+        
+        let chartSettings = ExamplesDefaults.chartSettingsWithPanZoom
 
-        let chartPointsNotificationsLayer = ChartPointsViewsLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: chartPoints, viewGenerator: notificationGenerator, displayDelay: 1)
+        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
+        let (xAxisLayer, yAxisLayer, innerFrame) = (coordsSpace.xAxisLayer, coordsSpace.yAxisLayer, coordsSpace.chartInnerFrame)
+
+        let chartPointsNotificationsLayer = ChartPointsViewsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: chartPoints, viewGenerator: notificationGenerator, displayDelay: 1, mode: .custom)
+        // To preserve the offset of the notification views from the chart point they represent, during transforms, we need to pass mode: .custom along with this custom transformer.
+        chartPointsNotificationsLayer.customTransformer = {(model, view, layer) -> Void in
+            let screenLoc = layer.modelLocToScreenLoc(x: model.chartPoint.x.scalar, y: model.chartPoint.y.scalar)
+            view.frame.origin = CGPoint(x: screenLoc.x + 5, y: screenLoc.y - notificationViewHeight - 5)
+        }
         
-        let chartPointsLineLayer = ChartPointsLineLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, lineModels: [lineModel])
+        let chartPointsLineLayer = ChartPointsLineLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, lineModels: [lineModel])
         
-        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.blackColor(), linesWidth: ExamplesDefaults.guidelinesWidth)
-        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, settings: settings)
+        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.black, linesWidth: ExamplesDefaults.guidelinesWidth)
+        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, settings: settings)
         
         let chart = Chart(
             frame: chartFrame,
+            innerFrame: innerFrame,
+            settings: chartSettings,
             layers: [
-                xAxis,
-                yAxis,
+                xAxisLayer,
+                yAxisLayer,
                 guidelinesLayer,
                 chartPointsLineLayer,
                 chartPointsNotificationsLayer]
         )
         
-        self.view.addSubview(chart.view)
+        view.addSubview(chart.view)
         self.chart = chart
     }
 }

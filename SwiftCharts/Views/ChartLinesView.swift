@@ -9,78 +9,114 @@
 import UIKit
 
 public protocol ChartLinesViewPathGenerator {
-    func generatePath(points points: [CGPoint], lineWidth: CGFloat) -> UIBezierPath
+    func generatePath(points: [CGPoint], lineWidth: CGFloat) -> UIBezierPath
+    func generateAreaPath(points: [CGPoint], lineWidth: CGFloat) -> UIBezierPath
 }
 
-public class ChartLinesView: UIView {
+open class ChartLinesView: UIView {
 
-    private let lineColor: UIColor
-    private let lineWidth: CGFloat
-    private let animDuration: Float
-    private let animDelay: Float
-
-    init(path: UIBezierPath, frame: CGRect, lineColor: UIColor, lineWidth: CGFloat, animDuration: Float, animDelay: Float) {
-        
-        self.lineColor = lineColor
+    public let lineColors: [UIColor]
+    public let lineWidth: CGFloat
+    public let lineJoin: LineJoin
+    public let lineCap: LineCap
+    public let animDuration: Float
+    public let animDelay: Float
+    public let dashPattern: [Double]?
+    
+    public init(path: UIBezierPath, frame: CGRect, lineColors: [UIColor], lineWidth: CGFloat, lineJoin: LineJoin, lineCap: LineCap, animDuration: Float, animDelay: Float, dashPattern: [Double]?) {
+        self.lineColors = lineColors
         self.lineWidth = lineWidth
+        self.lineJoin = lineJoin
+        self.lineCap = lineCap
         self.animDuration = animDuration
         self.animDelay = animDelay
+        self.dashPattern = dashPattern
         
         super.init(frame: frame)
 
-        self.backgroundColor = UIColor.clearColor()
-        self.show(path: path)
+        backgroundColor = UIColor.clear
+        show(path: path)
+    }
+    
+    public convenience init(path: UIBezierPath, frame: CGRect, lineColor: UIColor, lineWidth: CGFloat, lineJoin: LineJoin, lineCap: LineCap, animDuration: Float, animDelay: Float, dashPattern: [Double]?) {
+        self.init(path: path, frame: frame, lineColors: [lineColor], lineWidth: lineWidth, lineJoin: lineJoin, lineCap: lineCap, animDuration: animDuration, animDelay: animDelay, dashPattern: dashPattern)
     }
 
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func createLineMask(frame frame: CGRect) -> CALayer {
+    fileprivate func createLineMask(frame: CGRect) -> CALayer {
         let lineMaskLayer = CAShapeLayer()
         var maskRect = frame
         maskRect.origin.y = 0
         maskRect.size.height = frame.size.height
-        let path = CGPathCreateWithRect(maskRect, nil)
+        let path = CGPath(rect: maskRect, transform: nil)
         
         lineMaskLayer.path = path
         
         return lineMaskLayer
     }
 
-    private func generateLayer(path path: UIBezierPath) -> CAShapeLayer {
+    open func generateLayer(path: UIBezierPath) -> CAShapeLayer {
         let lineLayer = CAShapeLayer()
-        lineLayer.lineJoin = kCALineJoinBevel
-        lineLayer.fillColor   = UIColor.clearColor().CGColor
-        lineLayer.lineWidth   = self.lineWidth
+        lineLayer.lineJoin = convertToCAShapeLayerLineJoin(lineJoin.CALayerString)
+        lineLayer.lineCap = convertToCAShapeLayerLineCap(lineCap.CALayerString)
+        lineLayer.fillColor = UIColor.clear.cgColor
+        lineLayer.lineWidth = lineWidth
+        lineLayer.strokeColor = lineColors.first?.cgColor ?? UIColor.white.cgColor
+        lineLayer.path = path.cgPath
         
-        lineLayer.path = path.CGPath;
-        lineLayer.strokeColor = self.lineColor.CGColor;
+        if dashPattern != nil {
+            lineLayer.lineDashPattern = dashPattern as [NSNumber]?
+        }
         
-        if self.animDuration > 0 {
-            lineLayer.strokeEnd   = 0.0
+        if animDuration > 0 {
+            lineLayer.strokeEnd = 0.0
             let pathAnimation = CABasicAnimation(keyPath: "strokeEnd")
-            pathAnimation.duration = CFTimeInterval(self.animDuration)
-            pathAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
-            pathAnimation.fromValue = NSNumber(float: 0)
-            pathAnimation.toValue = NSNumber(float: 1)
+            pathAnimation.duration = CFTimeInterval(animDuration)
+            pathAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
+            pathAnimation.fromValue = NSNumber(value: 0 as Float)
+            pathAnimation.toValue = NSNumber(value: 1 as Float)
             pathAnimation.autoreverses = false
-            pathAnimation.removedOnCompletion = false
-            pathAnimation.fillMode = kCAFillModeForwards
-            
-            pathAnimation.beginTime = CACurrentMediaTime() + CFTimeInterval(self.animDelay)
-            lineLayer.addAnimation(pathAnimation, forKey: "strokeEndAnimation")
-            
+            pathAnimation.isRemovedOnCompletion = false
+            pathAnimation.fillMode = CAMediaTimingFillMode.forwards
+
+            pathAnimation.beginTime = CACurrentMediaTime() + CFTimeInterval(animDelay)
+            lineLayer.add(pathAnimation, forKey: "strokeEndAnimation")
+
         } else {
             lineLayer.strokeEnd = 1
         }
-        
+
         return lineLayer
     }
     
-    private func show(path path: UIBezierPath) {
-        let lineMask = self.createLineMask(frame: frame)
-        self.layer.mask = lineMask
-        self.layer.addSublayer(self.generateLayer(path: path))
+    fileprivate func show(path: UIBezierPath) {
+        let lineLayer = generateLayer(path: path)
+        layer.addSublayer(lineLayer)
+        addGradientForMultiColorLine(withLayer: lineLayer)
+    }
+    
+    fileprivate func addGradientForMultiColorLine(withLayer lineLayer: CAShapeLayer) {
+        if lineColors.count > 1 {
+            let gradientLayer = CAGradientLayer()
+            gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
+            gradientLayer.endPoint = CGPoint(x: 1.0, y: 0)
+            gradientLayer.frame = self.frame
+            gradientLayer.colors = lineColors.map({$0.cgColor})
+            gradientLayer.mask = lineLayer
+            layer.addSublayer(gradientLayer)
+        }
     }
  }
+
+// Helper function inserted by Swift 4.2 migrator.
+fileprivate func convertToCAShapeLayerLineJoin(_ input: String) -> CAShapeLayerLineJoin {
+	return CAShapeLayerLineJoin(rawValue: input)
+}
+
+// Helper function inserted by Swift 4.2 migrator.
+fileprivate func convertToCAShapeLayerLineCap(_ input: String) -> CAShapeLayerLineCap {
+	return CAShapeLayerLineCap(rawValue: input)
+}

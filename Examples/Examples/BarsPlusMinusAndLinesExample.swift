@@ -11,7 +11,7 @@ import SwiftCharts
 
 class BarsPlusMinusAndLinesExample: UIViewController {
 
-    private var chart: Chart? // arc
+    fileprivate var chart: Chart? // arc
 
     override func viewDidLoad() {
         
@@ -40,66 +40,75 @@ class BarsPlusMinusAndLinesExample: UIViewController {
         ]
         
         let alpha: CGFloat = 0.5
-        let posColor = UIColor.greenColor().colorWithAlphaComponent(alpha)
-        let negColor = UIColor.redColor().colorWithAlphaComponent(alpha)
-        let zero = ChartAxisValueFloat(0)
-        let bars: [ChartBarModel] = barsData.enumerate().flatMap {index, tuple in
+        let posColor = UIColor.green.withAlphaComponent(alpha)
+        let negColor = UIColor.red.withAlphaComponent(alpha)
+        let zero = ChartAxisValueDouble(0)
+        let bars: [ChartBarModel] = barsData.enumerated().flatMap {index, tuple in
             [
                 ChartBarModel(constant: ChartAxisValueDouble(index), axisValue1: zero, axisValue2: ChartAxisValueDouble(tuple.min), bgColor: negColor),
                 ChartBarModel(constant: ChartAxisValueDouble(index), axisValue1: zero, axisValue2: ChartAxisValueDouble(tuple.max), bgColor: posColor)
             ]
         }
         
-        let yValues = (-80).stride(through: 80, by: 20).map {ChartAxisValueFloat(CGFloat($0), labelSettings: labelSettings)}
-        let xValues =
-            [ChartAxisValueString(order: -1)] +
-            barsData.enumerate().map {index, tuple in ChartAxisValueString(tuple.0, order: index, labelSettings: labelSettings)} +
-            [ChartAxisValueString(order: barsData.count)]
-
-        
-        let xModel = ChartAxisModel(axisValues: xValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings))
-        let yModel = ChartAxisModel(axisValues: yValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical()))
-        let chartFrame = ExamplesDefaults.chartFrame(self.view.bounds)
-        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: ExamplesDefaults.chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
-        let (xAxis, yAxis, innerFrame) = (coordsSpace.xAxis, coordsSpace.yAxis, coordsSpace.chartInnerFrame)
-        
-        let barsLayer = ChartBarsLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, bars: bars, horizontal: false, barWidth: Env.iPad ? 40 : 25, animDuration: 0.5)
-        
-        // labels layer
-        // create chartpoints for the top and bottom of the bars, where we will show the labels
-        let labelChartPoints = bars.map {bar in
-            ChartPoint(x: bar.constant, y: bar.axisValue2)
+        let xGenerator = ChartAxisGeneratorMultiplier(1)
+        let yGenerator = ChartAxisGeneratorMultiplier(20)
+        let labelsGenerator = ChartAxisLabelsGeneratorFunc {scalar in
+            return ChartAxisLabel(text: "\(scalar)", settings: labelSettings)
         }
-        let formatter = NSNumberFormatter()
+        
+        let xModel = ChartAxisModel(firstModelValue: -1, lastModelValue: Double(barsData.count), axisTitleLabels: [ChartAxisLabel(text: "Axis title", settings: labelSettings)], axisValuesGenerator: xGenerator, labelsGenerator: labelsGenerator)
+        let yModel = ChartAxisModel(firstModelValue: -80, lastModelValue: 80, axisTitleLabels: [ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical())], axisValuesGenerator: yGenerator, labelsGenerator: labelsGenerator)
+        
+        let chartFrame = ExamplesDefaults.chartFrame(view.bounds)
+        
+        let chartSettings = ExamplesDefaults.chartSettingsWithPanZoom
+
+        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
+        let (xAxisLayer, yAxisLayer, innerFrame) = (coordsSpace.xAxisLayer, coordsSpace.yAxisLayer, coordsSpace.chartInnerFrame)
+        
+        let barViewSettings = ChartBarViewSettings(animDuration: 0.5)
+        let barsLayer = ChartBarsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, bars: bars, horizontal: false, barWidth: Env.iPad ? 40 : 25, settings: barViewSettings)
+        
+        /*
+        Labels layer.
+        Create chartpoints for the top and bottom of the bars, where we will show the labels.
+        There are multiple ways to do this. Here we represent the labels with chartpoints at the top/bottom of the bars. We set some space using domain coordinates, in order for this to be updated properly during zoom / pan. Note that with this the spacing is also zoomed, meaning the labels will move away from the edges of the bars when we scale up, which maybe it's not wanted. More elaborate approaches involve passing a custom transform closure to the layer, or using GroupedBarsCompanionsLayer (currently only for stacked/grouped bars, though any bar chart can be represented with this).
+         */
+        let labelToBarSpace: Double = 3 // domain units
+        let labelChartPoints = bars.map {bar in
+            ChartPoint(x: bar.constant, y: bar.axisValue2.copy(bar.axisValue2.scalar + (bar.axisValue2.scalar > 0 ? labelToBarSpace : -labelToBarSpace)))
+        }
+        let formatter = NumberFormatter()
         formatter.maximumFractionDigits = 2
-        let labelsLayer = ChartPointsViewsLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: labelChartPoints, viewGenerator: {(chartPointModel, layer, chart) -> UIView? in
+        let labelsLayer = ChartPointsViewsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: labelChartPoints, viewGenerator: {(chartPointModel, layer, chart) -> UIView? in
             let label = HandlingLabel()
-            let posOffset: CGFloat = 10
             
             let pos = chartPointModel.chartPoint.y.scalar > 0
             
-            let yOffset = pos ? -posOffset : posOffset
-            label.text = "\(formatter.stringFromNumber(chartPointModel.chartPoint.y.scalar)!)%"
+            label.text = "\(formatter.string(from: NSNumber(value: chartPointModel.chartPoint.y.scalar - labelToBarSpace))!)%"
             label.font = ExamplesDefaults.labelFont
             label.sizeToFit()
-            label.center = CGPointMake(chartPointModel.screenLoc.x, pos ? innerFrame.origin.y : innerFrame.origin.y + innerFrame.size.height)
+            label.center = CGPoint(x: chartPointModel.screenLoc.x, y: pos ? innerFrame.origin.y : innerFrame.origin.y + innerFrame.size.height)
             label.alpha = 0
-
+            
             label.movedToSuperViewHandler = {[weak label] in
-                UIView.animateWithDuration(0.3, animations: {
+                UIView.animate(withDuration: 0.3, animations: {
                     label?.alpha = 1
-                    label?.center.y = chartPointModel.screenLoc.y + yOffset
+                    label?.center.y = chartPointModel.screenLoc.y
                 })
             }
             return label
             
-        }, displayDelay: 0.5) // show after bars animation
+        }, displayDelay: 0.5, mode: .translate) // show after bars animation
+        
+        // NOTE: If you need the labels from labelsLayer to stay at the same distance from the bars during zooming, i.e. that the space between them and the bars is not scaled, use mode: .custom and pass a custom transform block, in which you update manually the position. Similar to how it's done in e.g. NotificationsExample for the notifications views.
         
         // line layer
-        let lineChartPoints = lineData.enumerate().map {index, tuple in ChartPoint(x: ChartAxisValueDouble(index), y: ChartAxisValueDouble(tuple.val))}
-        let lineModel = ChartLineModel(chartPoints: lineChartPoints, lineColor: UIColor.blackColor(), lineWidth: 2, animDuration: 0.5, animDelay: 1)
-        let lineLayer = ChartPointsLineLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, lineModels: [lineModel])
+        let lineChartPoints = lineData.enumerated().map {index, tuple in ChartPoint(x: ChartAxisValueDouble(index), y: ChartAxisValueDouble(tuple.val))}
+        let lineModel = ChartLineModel(chartPoints: lineChartPoints, lineColor: UIColor.black, lineWidth: 2, animDuration: 0.5, animDelay: 1)
+        let lineLayer = ChartPointsLineLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, lineModels: [lineModel])
         
+        // circles layer
         let circleViewGenerator = {(chartPointModel: ChartPointLayerModel, layer: ChartPointsLayer, chart: Chart) -> UIView? in
             let color = UIColor(red: 0.7, green: 0.7, blue: 0.7, alpha: 1)
             let circleView = ChartPointEllipseView(center: chartPointModel.screenLoc, diameter: 6)
@@ -107,23 +116,25 @@ class BarsPlusMinusAndLinesExample: UIViewController {
             circleView.fillColor = color
             return circleView
         }
-        let lineCirclesLayer = ChartPointsViewsLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: lineChartPoints, viewGenerator: circleViewGenerator, displayDelay: 1.5, delayBetweenItems: 0.05)
+        let lineCirclesLayer = ChartPointsViewsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: lineChartPoints, viewGenerator: circleViewGenerator, displayDelay: 1.5, delayBetweenItems: 0.05, mode: .translate)
         
         
         // show a gap between positive and negative bar
-        let dummyZeroYChartPoint = ChartPoint(x: ChartAxisValueFloat(0), y: ChartAxisValueFloat(0))
-        let yZeroGapLayer = ChartPointsViewsLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: [dummyZeroYChartPoint], viewGenerator: {(chartPointModel, layer, chart) -> UIView? in
+        let dummyZeroYChartPoint = ChartPoint(x: ChartAxisValueDouble(0), y: ChartAxisValueDouble(0))
+        let yZeroGapLayer = ChartPointsViewsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: [dummyZeroYChartPoint], viewGenerator: {(chartPointModel, layer, chart) -> UIView? in
             let height: CGFloat = 2
-            let v = UIView(frame: CGRectMake(innerFrame.origin.x + 2, chartPointModel.screenLoc.y - height / 2, innerFrame.origin.x + innerFrame.size.height, height))
-            v.backgroundColor = UIColor.whiteColor()
+            let v = UIView(frame: CGRect(x: chart.contentView.frame.origin.x + 2, y: chartPointModel.screenLoc.y - height / 2, width: chart.contentView.frame.origin.x + chart.contentView.frame.height, height: height))
+            v.backgroundColor = UIColor.white
             return v
         })
         
         let chart = Chart(
             frame: chartFrame,
+            innerFrame: innerFrame,
+            settings: chartSettings,
             layers: [
-                xAxis,
-                yAxis,
+                xAxisLayer,
+                yAxisLayer,
                 barsLayer,
                 labelsLayer,
                 yZeroGapLayer,
@@ -132,7 +143,7 @@ class BarsPlusMinusAndLinesExample: UIViewController {
             ]
         )
         
-        self.view.addSubview(chart.view)
+        view.addSubview(chart.view)
         self.chart = chart
     }
 

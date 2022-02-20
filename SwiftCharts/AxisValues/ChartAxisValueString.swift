@@ -8,19 +8,18 @@
 
 import UIKit
 
-public class ChartAxisValueString: ChartAxisValue {
+open class ChartAxisValueString: ChartAxisValue {
    
-    let string: String
-    private let labelSettings: ChartLabelSettings
+    public let string: String
     
     public init(_ string: String = "", order: Int, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
         self.string = string
-        self.labelSettings = labelSettings
-        super.init(scalar: Double(order))
+        super.init(scalar: Double(order), labelSettings: labelSettings)
     }
     
-    override public var labels: [ChartAxisLabel] {
-        let axisLabel = ChartAxisLabel(text: self.string, settings: self.labelSettings)
-        return [axisLabel]
+    // MARK: CustomStringConvertible
+
+    override open var description: String {
+        return string
     }
 }

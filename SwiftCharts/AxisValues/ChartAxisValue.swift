@@ -9,46 +9,47 @@
 import UIKit
 
 /**
-    An axis value, which is represented internally by a double and provides the label which is displayed in the chart (or labels, in the case of working with multiple labels per axis value).
-    This class is not meant to be instantiated directly. Use one of the existing subclasses or create a new one.
-*/
-public class ChartAxisValue: Equatable {
-
+ A ChartAxisValue models a value along a particular chart axis. For example, two ChartAxisValues represent the two components of a ChartPoint. It has a backing Double scalar value, which provides a canonical form for all subclasses to be laid out along an axis. It also has one or more labels that are drawn in the chart.
+ This class is not meant to be instantiated directly. Use one of the existing subclasses or create a new one.
+ */
+open class ChartAxisValue: Equatable, Hashable, CustomStringConvertible {
+    
+    /// The backing value for all other types of axis values
     public let scalar: Double
-   
-    public var text: String {
-        fatalError("Override")
+    public let labelSettings: ChartLabelSettings
+    public var hidden = false
+
+    /// The labels that will be displayed in the chart
+    open var labels: [ChartAxisLabel] {
+        let axisLabel = ChartAxisLabel(text: description, settings: labelSettings)
+        axisLabel.hidden = hidden
+        return [axisLabel]
     }
-    
-    /**
-        Labels that will be displayed on the chart. How this is done depends on the implementation of ChartAxisLayer.
-        In the most common case this will be an array with only one element.
-    */
-    public var labels: [ChartAxisLabel] {
-        fatalError("Override")
-    }
-    
-    public var hidden: Bool = false {
-        didSet {
-            for label in self.labels {
-                label.hidden = self.hidden
-            }
-        }
-    }
-  
-    public init(scalar: Double) {
+
+    public init(scalar: Double, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
         self.scalar = scalar
+        self.labelSettings = labelSettings
     }
     
-    public var copy: ChartAxisValue {
-        return self.copy(self.scalar)
+    open var copy: ChartAxisValue {
+        return copy(scalar)
     }
     
-    public func copy(scalar: Double) -> ChartAxisValue {
-        return ChartAxisValue(scalar: scalar)
+    open func copy(_ scalar: Double) -> ChartAxisValue {
+        return ChartAxisValue(scalar: scalar, labelSettings: labelSettings)
+    }
+
+    // MARK: CustomStringConvertible
+
+    open var description: String {
+        return String(scalar)
+    }
+    
+    open func hash(into hasher: inout Hasher) {
+        hasher.combine(self.scalar.hashValue)
     }
 }
 
 public func ==(lhs: ChartAxisValue, rhs: ChartAxisValue) -> Bool {
-    return lhs.scalar == rhs.scalar
+    return lhs.scalar =~ rhs.scalar
 }

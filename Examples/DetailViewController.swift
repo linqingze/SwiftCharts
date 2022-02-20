@@ -12,114 +12,119 @@ class DetailViewController: UIViewController, UISplitViewControllerDelegate {
     
     @IBOutlet weak var detailDescriptionLabel: UILabel!
     
-    lazy var chartFrame: CGRect! = {
-        CGRectMake(0, 80, self.view.frame.size.width, self.view.frame.size.height - 80)
+    lazy private(set) var chartFrame: CGRect! = {
+        CGRect(x: 0, y: 80, width: self.view.frame.size.width, height: self.view.frame.size.height - 80)
     }()
     
     var detailItem: Example? {
         didSet {
-            self.configureView()
+            configureView()
         }
     }
     var currentExampleController: UIViewController?
     
     func configureView() {
         
-        if let example: Example = self.detailItem  {
+        if let example: Example = detailItem  {
             switch example {
-            case .HelloWorld:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(HelloWorld())
-            case .Bars:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(BarsExample())
-            case .StackedBars:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(StackedBarsExample())
-            case .BarsPlusMinus:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(BarsPlusMinusWithGradientExample())
-            case .GroupedBars:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(GroupedBarsExample())
-            case .BarsStackedGrouped:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(GroupedAndStackedBarsExample())
-            case .Scatter:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(ScatterExample())
-            case .Notifications:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(NotificationsExample())
-            case .Target:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(TargetExample())
-            case .Areas:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(AreasExample())
-            case .Bubble:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(BubbleExample())
-            case .Combination:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(BarsPlusMinusAndLinesExample())
-            case .Scroll:
-                self.setSplitSwipeEnabled(false)
-                self.automaticallyAdjustsScrollViewInsets = false
-                self.showExampleController(ScrollExample())
-            case .Coords:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(CoordsExample())
-            case .Tracker:
-                self.setSplitSwipeEnabled(false)
-                self.showExampleController(TrackerExample())
-            case .EqualSpacing:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(EqualSpacingExample())
-            case .CustomUnits:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(CustomUnitsExample())
-            case .Multival:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(MultipleLabelsExample())
-            case .MultiAxis:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(MultipleAxesExample())
-            case .MultiAxisInteractive:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(MultipleAxesInteractiveExample())
-            case .CandleStick:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(CandleStickExample())
-            case .Cubiclines:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(CubicLinesExample())
-            case .NotNumeric:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(NotNumericExample())
-            case .CandleStickInteractive:
-                self.setSplitSwipeEnabled(false)
-                self.showExampleController(CandleStickInteractiveExample())
-            case .Trendline:
-                self.setSplitSwipeEnabled(true)
-                self.showExampleController(TrendlineExample())
+            case .helloWorld:
+                setSplitSwipeEnabled(true)
+                showExampleController(HelloWorld())
+            case .bars:
+                setSplitSwipeEnabled(true)
+                showExampleController(BarsExample())
+            case .stackedBars:
+                setSplitSwipeEnabled(true)
+                showExampleController(StackedBarsExample())
+            case .barsPlusMinus:
+                setSplitSwipeEnabled(true)
+                showExampleController(BarsPlusMinusWithGradientExample())
+            case .groupedBars:
+                setSplitSwipeEnabled(true)
+                showExampleController(GroupedBarsExample())
+            case .barsStackedGrouped:
+                setSplitSwipeEnabled(true)
+                showExampleController(GroupedAndStackedBarsExample())
+            case .scatter:
+                setSplitSwipeEnabled(true)
+                showExampleController(ScatterExample())
+            case .notifications:
+                setSplitSwipeEnabled(true)
+                showExampleController(NotificationsExample())
+            case .target:
+                setSplitSwipeEnabled(true)
+                showExampleController(TargetExample())
+            case .areas:
+                setSplitSwipeEnabled(true)
+                showExampleController(AreasExample())
+            case .rangedAxis:
+                setSplitSwipeEnabled(true)
+                showExampleController(RangedAxisExample())
+            case .bubble:
+                setSplitSwipeEnabled(true)
+                showExampleController(BubbleExample())
+            case .combination:
+                setSplitSwipeEnabled(true)
+                showExampleController(BarsPlusMinusAndLinesExample())
+            case .coords:
+                setSplitSwipeEnabled(true)
+                showExampleController(CoordsExample())
+            case .tracker:
+                setSplitSwipeEnabled(false)
+                showExampleController(TrackerExample())
+            case .multiTracker:
+                setSplitSwipeEnabled(false)
+                showExampleController(MultiTrackerExample())
+            case .equalSpacing:
+                setSplitSwipeEnabled(true)
+                showExampleController(EqualSpacingExample())
+            case .customUnits:
+                setSplitSwipeEnabled(true)
+                showExampleController(CustomUnitsExample())
+            case .multival:
+                setSplitSwipeEnabled(true)
+                showExampleController(MultipleLabelsExample())
+            case .multiAxis:
+                setSplitSwipeEnabled(true)
+                showExampleController(MultipleAxesExample())
+            case .multiAxisInteractive:
+                setSplitSwipeEnabled(true)
+                showExampleController(MultipleAxesInteractiveExample())
+            case .candleStick:
+                setSplitSwipeEnabled(true)
+                showExampleController(CandleStickExample())
+            case .cubiclines:
+                setSplitSwipeEnabled(true)
+                showExampleController(CubicLinesExample())
+            case .cubiclinesWithGradient:
+                setSplitSwipeEnabled(true)
+                showExampleController(CubicLinesWithGradientExample())
+            case .notNumeric:
+                setSplitSwipeEnabled(true)
+                showExampleController(NotNumericExample())
+            case .candleStickInteractive:
+                setSplitSwipeEnabled(false)
+                showExampleController(CandleStickInteractiveExample())
+            case .trendline:
+                setSplitSwipeEnabled(true)
+                showExampleController(TrendlineExample())
             }
         }
     }
     
-    private func showExampleController(controller: UIViewController) {
-        if let currentExampleController = self.currentExampleController {
-            currentExampleController.removeFromParentViewController()
+    fileprivate func showExampleController(_ controller: UIViewController) {
+        if let currentExampleController = currentExampleController {
+            currentExampleController.removeFromParent()
             currentExampleController.view.removeFromSuperview()
         }
-        self.addChildViewController(controller)
-        self.view.addSubview(controller.view)
-        self.currentExampleController = controller
+        addChild(controller)
+        view.addSubview(controller.view)
+        currentExampleController = controller
     }
     
-    private func setSplitSwipeEnabled(enabled: Bool) {
-        if UIDevice.currentDevice().userInterfaceIdiom == UIUserInterfaceIdiom.Pad {
-            let splitViewController = UIApplication.sharedApplication().delegate?.window!!.rootViewController as! UISplitViewController
+    fileprivate func setSplitSwipeEnabled(_ enabled: Bool) {
+        if UIDevice.current.userInterfaceIdiom == UIUserInterfaceIdiom.pad {
+            let splitViewController = UIApplication.shared.delegate?.window!!.rootViewController as! UISplitViewController
             splitViewController.presentsWithGesture = enabled
         }
     }

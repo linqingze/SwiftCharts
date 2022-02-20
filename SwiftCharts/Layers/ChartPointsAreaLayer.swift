@@ -8,36 +8,32 @@
 
 import UIKit
 
-public class ChartPointsAreaLayer<T: ChartPoint>: ChartPointsLayer<T> {
+open class ChartPointsAreaLayer<T: ChartPoint>: ChartPointsLayer<T> {
     
-    private let areaColor: UIColor
-    private let animDuration: Float
-    private let animDelay: Float
-    private let addContainerPoints: Bool
+    fileprivate let areaColors: [UIColor]
+    fileprivate let animDuration: Float
+    fileprivate let animDelay: Float
+    fileprivate let pathGenerator: ChartLinesViewPathGenerator
+    fileprivate let addContainerPoints: Bool
+    fileprivate var areaViews: [UIView] = []
     
-    public init(xAxis: ChartAxisLayer, yAxis: ChartAxisLayer, innerFrame: CGRect, chartPoints: [T], areaColor: UIColor, animDuration: Float, animDelay: Float, addContainerPoints: Bool) {
-        self.areaColor = areaColor
+    public init(xAxis: ChartAxis, yAxis: ChartAxis, chartPoints: [T], areaColors: [UIColor], animDuration: Float, animDelay: Float, addContainerPoints: Bool,  pathGenerator: ChartLinesViewPathGenerator) {
+        self.areaColors = areaColors
         self.animDuration = animDuration
         self.animDelay = animDelay
+        self.pathGenerator = pathGenerator
         self.addContainerPoints = addContainerPoints
-        
-        super.init(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: chartPoints)
+        super.init(xAxis: xAxis, yAxis: yAxis, chartPoints: chartPoints)
     }
     
-    override func display(chart chart: Chart) {
-        var points = self.chartPointScreenLocs
-        
-        let origin = self.innerFrame.origin
-        let xLength = self.innerFrame.width
-        
-        let bottomY = origin.y + self.innerFrame.height
-        
-        if self.addContainerPoints {
-            points.append(CGPointMake(origin.x + xLength, bottomY))
-            points.append(CGPointMake(origin.x, bottomY))
-        }
-        
-        let areaView = ChartAreasView(points: points, frame: chart.bounds, color: self.areaColor, animDuration: self.animDuration, animDelay: self.animDelay)
+    public convenience init(xAxis: ChartAxis, yAxis: ChartAxis, chartPoints: [T], areaColor: UIColor, animDuration: Float, animDelay: Float, addContainerPoints: Bool, pathGenerator: ChartLinesViewPathGenerator) {
+        self.init(xAxis: xAxis, yAxis: yAxis, chartPoints: chartPoints, areaColors: [areaColor], animDuration: animDuration, animDelay: animDelay, addContainerPoints: addContainerPoints, pathGenerator: pathGenerator)
+    }
+    
+    open override func display(chart: Chart) {        
+        let areaView = ChartAreasView(points: chartPointScreenLocs, frame: chart.bounds, colors: areaColors, animDuration: animDuration, animDelay: animDelay, addContainerPoints: addContainerPoints, pathGenerator: pathGenerator)
+        areaViews.append(areaView)
         chart.addSubview(areaView)
     }
 }
+

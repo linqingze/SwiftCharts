@@ -8,85 +8,102 @@
 
 import UIKit
 
-public class ChartAreasView: UIView {
+open class ChartAreasView: UIView {
 
-    private let animDuration: Float
-    private let color: UIColor
-    private let animDelay: Float
+    fileprivate let animDuration: Float
+    fileprivate let animDelay: Float
+    fileprivate let addContainerPoints: Bool
     
-    public init(points: [CGPoint], frame: CGRect, color: UIColor, animDuration: Float, animDelay: Float) {
-        self.color = color
+    public init(points: [CGPoint], frame: CGRect, colors: [UIColor], animDuration: Float, animDelay: Float, addContainerPoints: Bool, pathGenerator: ChartLinesViewPathGenerator) {
         self.animDuration = animDuration
         self.animDelay = animDelay
+        self.addContainerPoints = addContainerPoints
         
         super.init(frame: frame)
 
-        self.backgroundColor = UIColor.clearColor()
-        self.show(path: self.generateAreaPath(points: points))
+        backgroundColor = UIColor.clear
+        show(path: generateAreaPath(points: points, pathGenerator: pathGenerator), colors: colors)
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
-    private func generateAreaPath(points points: [CGPoint]) -> UIBezierPath {
-        
-        let progressline = UIBezierPath()
-        progressline.lineWidth = 1.0
-        progressline.lineCapStyle = .Round
-        progressline.lineJoinStyle = .Round
-        
-        if let p = points.first {
-            progressline.moveToPoint(p)
-        }
-        
-        for i in 1..<points.count {
-            let p = points[i]
-            progressline.addLineToPoint(p)
-        }
-        
-        progressline.closePath()
-        
-        return progressline
+    
+    fileprivate func generateAreaPath(points: [CGPoint], pathGenerator: ChartLinesViewPathGenerator) -> UIBezierPath {
+        return pathGenerator.generateAreaPath(points: points, lineWidth: 1.0)
     }
     
-    private func show(path path: UIBezierPath) {
-        let areaLayer = CAShapeLayer()
-        areaLayer.lineJoin = kCALineJoinBevel
-        areaLayer.fillColor   = self.color.CGColor
-        areaLayer.lineWidth   = 2.0
-        areaLayer.strokeEnd   = 0.0
-        self.layer.addSublayer(areaLayer)
+    fileprivate func show(path: UIBezierPath, colors: [UIColor]) {
+        var gradientColors = colors
+        guard let firstColor = gradientColors.first else {
+            print("WARNING: No color(s) used for ChartAreasView")
+            return
+        }
         
-        areaLayer.path = path.CGPath
-        areaLayer.strokeColor = self.color.CGColor
+        /*
+         * There is always the possibility to draw a single-color gradient.
+         * Since we're adding the gradient layer anyway we must ensure that there are at least 2 colors present.
+         * To handle this case we're adding the same color twice to the colors array to make sure we have at least 2 colors to fill the gradient layer with.
+         */
+        if gradientColors.count == 1 {
+            gradientColors.append(gradientColors[0])
+        }
         
-        if self.animDuration > 0 {
+        let shape = CAShapeLayer()
+        shape.frame = CGRect(x: bounds.origin.x, y: bounds.origin.y, width: path.bounds.width, height: bounds.height)
+        
+        shape.path = path.cgPath
+        shape.strokeColor = firstColor.cgColor
+        shape.lineWidth = 2
+        shape.fillColor = nil
+        
+        let gradient = CAGradientLayer()
+        gradient.frame = shape.bounds
+        gradient.colors = gradientColors.map{$0.cgColor}
+        
+        let mask = CAShapeLayer()
+        mask.frame = self.bounds
+        
+        if addContainerPoints {
+            path.addLine(to: CGPoint(x: shape.frame.size.width, y: shape.frame.size.height))
+            path.addLine(to: CGPoint(x: 0, y: shape.frame.size.height))
+            path.close()
+        }
+        
+        mask.path = path.cgPath
+        mask.fillColor = UIColor.black.cgColor
+        gradient.mask = mask
+        
+        layer.addSublayer(gradient)
+        layer.addSublayer(shape)
+        
+        if animDuration > 0 {
             let maskLayer = CAGradientLayer()
-            maskLayer.anchorPoint = CGPointZero
+            maskLayer.anchorPoint = CGPoint.zero
             
             let colors = [
-                UIColor(white: 0, alpha: 0).CGColor,
-                UIColor(white: 0, alpha: 1).CGColor]
+                UIColor(white: 0, alpha: 0).cgColor,
+                UIColor(white: 0, alpha: 1).cgColor]
             maskLayer.colors = colors
-            maskLayer.bounds = CGRectMake(0, 0, 0, self.layer.bounds.size.height)
-            maskLayer.startPoint = CGPointMake(1, 0)
-            maskLayer.endPoint = CGPointMake(0, 0)
-            self.layer.mask = maskLayer
-        
+            maskLayer.bounds = CGRect(x: 0, y: 0, width: 0, height: layer.bounds.size.height)
+            maskLayer.startPoint = CGPoint(x: 1, y: 0)
+            maskLayer.endPoint = CGPoint(x: 0, y: 0)
+            layer.mask = maskLayer
+            
             let revealAnimation = CABasicAnimation(keyPath: "bounds")
-            revealAnimation.fromValue = NSValue(CGRect: CGRectMake(0, 0, 0, self.layer.bounds.size.height))
+            revealAnimation.fromValue = NSValue(cgRect: CGRect(x: 0, y: 0, width: 0, height: layer.bounds.size.height))
             
-            let target = CGRectMake(self.layer.bounds.origin.x, self.layer.bounds.origin.y, self.layer.bounds.size.width + 2000, self.layer.bounds.size.height);
+            let target = CGRect(x: layer.bounds.origin.x, y: layer.bounds.origin.y, width: layer.bounds.size.width + 2000, height: layer.bounds.size.height)
             
-            revealAnimation.toValue = NSValue(CGRect: target)
-            revealAnimation.duration = CFTimeInterval(self.animDuration)
+            revealAnimation.toValue = NSValue(cgRect: target)
+            revealAnimation.duration = CFTimeInterval(animDuration)
             
-            revealAnimation.removedOnCompletion = false
-            revealAnimation.fillMode = kCAFillModeForwards
+            revealAnimation.isRemovedOnCompletion = false
+            revealAnimation.fillMode = CAMediaTimingFillMode.forwards
             
-            revealAnimation.beginTime = CACurrentMediaTime() + CFTimeInterval(self.animDelay)
-            self.layer.mask?.addAnimation(revealAnimation, forKey: "revealAnimation")
+            revealAnimation.beginTime = CACurrentMediaTime() + CFTimeInterval(animDelay)
+            layer.mask?.add(revealAnimation, forKey: "revealAnimation")
         }
     }
 }
+

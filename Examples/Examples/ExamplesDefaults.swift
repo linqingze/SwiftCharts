@@ -13,14 +13,22 @@ struct ExamplesDefaults {
     
     static var chartSettings: ChartSettings {
         if Env.iPad {
-            return self.iPadChartSettings
+            return iPadChartSettings
         } else {
-            return self.iPhoneChartSettings
+            return iPhoneChartSettings
         }
     }
 
-    private static var iPadChartSettings: ChartSettings {
-        let chartSettings = ChartSettings()
+    static var chartSettingsWithPanZoom: ChartSettings {
+        if Env.iPad {
+            return iPadChartSettingsWithPanZoom
+        } else {
+            return iPhoneChartSettingsWithPanZoom
+        }
+    }
+    
+    fileprivate static var iPadChartSettings: ChartSettings {
+        var chartSettings = ChartSettings()
         chartSettings.leading = 20
         chartSettings.top = 20
         chartSettings.trailing = 20
@@ -31,11 +39,12 @@ struct ExamplesDefaults {
         chartSettings.axisStrokeWidth = 1
         chartSettings.spacingBetweenAxesX = 15
         chartSettings.spacingBetweenAxesY = 15
+        chartSettings.labelsSpacing = 0
         return chartSettings
     }
     
-    private static var iPhoneChartSettings: ChartSettings {
-        let chartSettings = ChartSettings()
+    fileprivate static var iPhoneChartSettings: ChartSettings {
+        var chartSettings = ChartSettings()
         chartSettings.leading = 10
         chartSettings.top = 10
         chartSettings.trailing = 10
@@ -46,11 +55,26 @@ struct ExamplesDefaults {
         chartSettings.axisStrokeWidth = 0.2
         chartSettings.spacingBetweenAxesX = 8
         chartSettings.spacingBetweenAxesY = 8
+        chartSettings.labelsSpacing = 0
+        return chartSettings
+    }
+
+    fileprivate static var iPadChartSettingsWithPanZoom: ChartSettings {
+        var chartSettings = iPadChartSettings
+        chartSettings.zoomPan.panEnabled = true
+        chartSettings.zoomPan.zoomEnabled = true
+        return chartSettings
+    }
+
+    fileprivate static var iPhoneChartSettingsWithPanZoom: ChartSettings {
+        var chartSettings = iPhoneChartSettings
+        chartSettings.zoomPan.panEnabled = true
+        chartSettings.zoomPan.zoomEnabled = true
         return chartSettings
     }
     
-    static func chartFrame(containerBounds: CGRect) -> CGRect {
-        return CGRectMake(0, 70, containerBounds.size.width, containerBounds.size.height - 70)
+    static func chartFrame(_ containerBounds: CGRect) -> CGRect {
+        return CGRect(x: 0, y: 70, width: containerBounds.size.width, height: containerBounds.size.height - 70)
     }
     
     static var labelSettings: ChartLabelSettings {
@@ -65,8 +89,8 @@ struct ExamplesDefaults {
         return ExamplesDefaults.fontWithSize(Env.iPad ? 12 : 10)
     }
     
-    static func fontWithSize(size: CGFloat) -> UIFont {
-        return UIFont(name: "Helvetica", size: size) ?? UIFont.systemFontOfSize(size)
+    static func fontWithSize(_ size: CGFloat) -> UIFont {
+        return UIFont(name: "Helvetica", size: size) ?? UIFont.systemFont(ofSize: size)
     }
     
     static var guidelinesWidth: CGFloat {

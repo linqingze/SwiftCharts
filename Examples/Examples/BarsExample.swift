@@ -13,78 +13,86 @@ import SwiftCharts
 // Alternatively it's possible to use ChartBarsLayer (see e.g. implementation of BarsChart for a simple example), which provides more ready to use, bar-specific functionality, but is accordingly more constrained.
 class BarsExample: UIViewController {
     
-    private var chart: Chart?
+    fileprivate var chart: Chart?
     
     let sideSelectorHeight: CGFloat = 50
     
-    private func barsChart(horizontal horizontal: Bool) -> Chart {
+    fileprivate func barsChart(horizontal: Bool) -> Chart {
         let tuplesXY = [(2, 8), (4, 9), (6, 10), (8, 12), (12, 17)]
 
-        func reverseTuples(tuples: [(Int, Int)]) -> [(Int, Int)] {
+        func reverseTuples(_ tuples: [(Int, Int)]) -> [(Int, Int)] {
             return tuples.map{($0.1, $0.0)}
         }
         
         let chartPoints = (horizontal ? reverseTuples(tuplesXY) : tuplesXY).map{ChartPoint(x: ChartAxisValueInt($0.0), y: ChartAxisValueInt($0.1))}
         
         let labelSettings = ChartLabelSettings(font: ExamplesDefaults.labelFont)
+
+        let generator = ChartAxisGeneratorMultiplier(2)
+        let labelsGenerator = ChartAxisLabelsGeneratorFunc {scalar in
+            return ChartAxisLabel(text: "\(scalar)", settings: labelSettings)
+        }
+        let xGenerator = ChartAxisGeneratorMultiplier(2)
         
-        let (axisValues1, axisValues2) = (
-            0.stride(through: 20, by: 2).map {ChartAxisValueFloat(CGFloat($0), labelSettings: labelSettings)},
-            0.stride(through: 14, by: 2).map {ChartAxisValueFloat(CGFloat($0), labelSettings: labelSettings)}
-        )
-        let (xValues, yValues) = horizontal ? (axisValues1, axisValues2) : (axisValues2, axisValues1)
-        
-        let xModel = ChartAxisModel(axisValues: xValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings))
-        let yModel = ChartAxisModel(axisValues: yValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical()))
+        let xModel = ChartAxisModel(firstModelValue: 0, lastModelValue: 20, axisTitleLabels: [ChartAxisLabel(text: "Axis title", settings: labelSettings)], axisValuesGenerator: xGenerator, labelsGenerator: labelsGenerator)
+        let yModel = ChartAxisModel(firstModelValue: 0, lastModelValue: 20, axisTitleLabels: [ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical())], axisValuesGenerator: generator, labelsGenerator: labelsGenerator)
         
         let barViewGenerator = {(chartPointModel: ChartPointLayerModel, layer: ChartPointsViewsLayer, chart: Chart) -> UIView? in
-            let bottomLeft = CGPointMake(layer.innerFrame.origin.x, layer.innerFrame.origin.y + layer.innerFrame.height)
+            let bottomLeft = layer.modelLocToScreenLoc(x: 0, y: 0)
             
             let barWidth: CGFloat = Env.iPad ? 60 : 30
             
+            let settings = ChartBarViewSettings(animDuration: 0.5)
+            
             let (p1, p2): (CGPoint, CGPoint) = {
                 if horizontal {
-                    return (CGPointMake(bottomLeft.x, chartPointModel.screenLoc.y), CGPointMake(chartPointModel.screenLoc.x, chartPointModel.screenLoc.y))
+                    return (CGPoint(x: bottomLeft.x, y: chartPointModel.screenLoc.y), CGPoint(x: chartPointModel.screenLoc.x, y: chartPointModel.screenLoc.y))
                 } else {
-                    return (CGPointMake(chartPointModel.screenLoc.x, bottomLeft.y), CGPointMake(chartPointModel.screenLoc.x, chartPointModel.screenLoc.y))
+                    return (CGPoint(x: chartPointModel.screenLoc.x, y: bottomLeft.y), CGPoint(x: chartPointModel.screenLoc.x, y: chartPointModel.screenLoc.y))
                 }
             }()
-            return ChartPointViewBar(p1: p1, p2: p2, width: barWidth, bgColor: UIColor.blueColor().colorWithAlphaComponent(0.6))
+            return ChartPointViewBar(p1: p1, p2: p2, width: barWidth, bgColor: UIColor.blue.withAlphaComponent(0.6), settings: settings)
         }
         
-        let frame = ExamplesDefaults.chartFrame(self.view.bounds)
-        let chartFrame = self.chart?.frame ?? CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, frame.size.height - sideSelectorHeight)
-        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: ExamplesDefaults.chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
-        let (xAxis, yAxis, innerFrame) = (coordsSpace.xAxis, coordsSpace.yAxis, coordsSpace.chartInnerFrame)
+        let frame = ExamplesDefaults.chartFrame(view.bounds)
+        let chartFrame = chart?.frame ?? CGRect(x: frame.origin.x, y: frame.origin.y, width: frame.size.width, height: frame.size.height - sideSelectorHeight)
         
-        let chartPointsLayer = ChartPointsViewsLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: chartPoints, viewGenerator: barViewGenerator)
+        let chartSettings = ExamplesDefaults.chartSettingsWithPanZoom
+
+        let coordsSpace = ChartCoordsSpaceLeftBottomSingleAxis(chartSettings: chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
+        let (xAxisLayer, yAxisLayer, innerFrame) = (coordsSpace.xAxisLayer, coordsSpace.yAxisLayer, coordsSpace.chartInnerFrame)
         
-        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.blackColor(), linesWidth: ExamplesDefaults.guidelinesWidth)
-        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, settings: settings)
+        let chartPointsLayer = ChartPointsViewsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: chartPoints, viewGenerator: barViewGenerator)
+        
+        let settings = ChartGuideLinesDottedLayerSettings(linesColor: UIColor.black, linesWidth: ExamplesDefaults.guidelinesWidth)
+        let guidelinesLayer = ChartGuideLinesDottedLayer(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, settings: settings)
         
         return Chart(
             frame: chartFrame,
+            innerFrame: innerFrame,
+            settings: chartSettings,
             layers: [
-                xAxis,
-                yAxis,
+                xAxisLayer,
+                yAxisLayer,
                 guidelinesLayer,
-                chartPointsLayer]
+                chartPointsLayer
+            ]
         )
     }
     
-    private func showChart(horizontal horizontal: Bool) {
+    fileprivate func showChart(horizontal: Bool) {
         self.chart?.clearView()
         
-        let chart = self.barsChart(horizontal: horizontal)
-        self.view.addSubview(chart.view)
+        let chart = barsChart(horizontal: horizontal)
+        view.addSubview(chart.view)
         self.chart = chart
     }
     
     override func viewDidLoad() {
-        self.showChart(horizontal: false)
-        if let chart = self.chart {
-            let sideSelector = DirSelector(frame: CGRectMake(0, chart.frame.origin.y + chart.frame.size.height, self.view.frame.size.width, self.sideSelectorHeight), controller: self)
-            self.view.addSubview(sideSelector)
+        showChart(horizontal: false)
+        if let chart = chart {
+            let sideSelector = DirSelector(frame: CGRect(x: 0, y: chart.frame.origin.y + chart.frame.size.height, width: view.frame.size.width, height: sideSelectorHeight), controller: self)
+            view.addSubview(sideSelector)
         }
     }
     
@@ -96,49 +104,49 @@ class BarsExample: UIViewController {
         
         weak var controller: BarsExample?
         
-        private let buttonDirs: [UIButton : Bool]
+        fileprivate let buttonDirs: [UIButton : Bool]
         
         init(frame: CGRect, controller: BarsExample) {
             
             self.controller = controller
             
-            self.horizontal = UIButton()
-            self.horizontal.setTitle("Horizontal", forState: .Normal)
-            self.vertical = UIButton()
-            self.vertical.setTitle("Vertical", forState: .Normal)
+            horizontal = UIButton()
+            horizontal.setTitle("Horizontal", for: UIControl.State())
+            vertical = UIButton()
+            vertical.setTitle("Vertical", for: UIControl.State())
             
-            self.buttonDirs = [self.horizontal : true, self.vertical : false]
+            buttonDirs = [horizontal : true, vertical : false]
             
             super.init(frame: frame)
             
-            self.addSubview(self.horizontal)
-            self.addSubview(self.vertical)
+            addSubview(horizontal)
+            addSubview(vertical)
             
-            for button in [self.horizontal, self.vertical] {
+            for button in [horizontal, vertical] {
                 button.titleLabel?.font = ExamplesDefaults.fontWithSize(14)
-                button.setTitleColor(UIColor.blueColor(), forState: .Normal)
-                button.addTarget(self, action: "buttonTapped:", forControlEvents: .TouchUpInside)
+                button.setTitleColor(UIColor.blue, for: UIControl.State())
+                button.addTarget(self, action: #selector(DirSelector.buttonTapped(_:)), for: .touchUpInside)
             }
         }
         
-        func buttonTapped(sender: UIButton) {
+        @objc func buttonTapped(_ sender: UIButton) {
             let horizontal = sender == self.horizontal ? true : false
             controller?.showChart(horizontal: horizontal)
         }
         
         override func didMoveToSuperview() {
-            let views = [self.horizontal, self.vertical]
+            let views = [horizontal, vertical]
             for v in views {
                 v.translatesAutoresizingMaskIntoConstraints = false
             }
             
-            let namedViews = views.enumerate().map{index, view in
+            let namedViews = views.enumerated().map{index, view in
                 ("v\(index)", view)
             }
             
-            let viewsDict = namedViews.reduce(Dictionary<String, UIView>()) {(var u, tuple) in
-                u[tuple.0] = tuple.1
-                return u
+            var viewsDict = Dictionary<String, UIView>()
+            for namedView in namedViews {
+                viewsDict[namedView.0] = namedView.1
             }
             
             let buttonsSpace: CGFloat = Env.iPad ? 20 : 10
@@ -147,9 +155,9 @@ class BarsExample: UIViewController {
                 "\(str)-(\(buttonsSpace))-[\(tuple.0)]"
             }
             
-            let vConstraits = namedViews.flatMap {NSLayoutConstraint.constraintsWithVisualFormat("V:|[\($0.0)]", options: NSLayoutFormatOptions(), metrics: nil, views: viewsDict)}
+            let vConstraits = namedViews.flatMap {NSLayoutConstraint.constraints(withVisualFormat: "V:|[\($0.0)]", options: NSLayoutConstraint.FormatOptions(), metrics: nil, views: viewsDict)}
             
-            self.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat(hConstraintStr, options: NSLayoutFormatOptions(), metrics: nil, views: viewsDict)
+            addConstraints(NSLayoutConstraint.constraints(withVisualFormat: hConstraintStr, options: NSLayoutConstraint.FormatOptions(), metrics: nil, views: viewsDict)
                 + vConstraits)
         }
         

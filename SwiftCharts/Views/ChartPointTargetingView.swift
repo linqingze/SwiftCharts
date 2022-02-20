@@ -8,61 +8,64 @@
 
 import UIKit
 
-public class ChartPointTargetingView: UIView {
+open class ChartPointTargetingView: UIView {
 
-    private let animDuration: Float
-    private let animDelay: Float
+    fileprivate let animDuration: Float
+    fileprivate let animDelay: Float
     
-    private let lineHorizontal: UIView
-    private let lineVertical: UIView
+    fileprivate let lineHorizontal: UIView
+    fileprivate let lineVertical: UIView
   
-    private let lineWidth = 1
+    fileprivate let lineWidth = 1
     
-    private let lineHorizontalTargetFrame: CGRect
-    private let lineVerticalTargetFrame: CGRect
+    fileprivate let lineHorizontalTargetFrame: CGRect
+    fileprivate let lineVerticalTargetFrame: CGRect
     
-    public init(chartPoint: ChartPoint, screenLoc: CGPoint, animDuration: Float, animDelay: Float, frame: CGRect, layer: ChartCoordsSpaceLayer) {
+    public init(chartPoint: ChartPoint, screenLoc: CGPoint, animDuration: Float, animDelay: Float, layer: ChartCoordsSpaceLayer, chart: Chart) {
         self.animDuration = animDuration
         self.animDelay = animDelay
       
-        let chartInnerFrame = layer.innerFrame
+        let axisOriginX = layer.modelLocToScreenLoc(x: layer.xAxis.first)
+        let axisOriginY = layer.modelLocToScreenLoc(y: layer.yAxis.last)
+        let axisLengthX = layer.modelLocToScreenLoc(x: layer.xAxis.last) - axisOriginX
+        let axisLengthY = abs(axisOriginY - layer.modelLocToScreenLoc(y: layer.yAxis.first))
         
-        let axisOriginX = chartInnerFrame.origin.x
-        let axisOriginY = chartInnerFrame.origin.y
-        let axisLengthX = chartInnerFrame.width
-        let axisLengthY = chartInnerFrame.height
+        lineHorizontal = UIView(frame: CGRect(x: axisOriginX, y: axisOriginY, width: axisLengthX, height: CGFloat(lineWidth)))
+        lineVertical = UIView(frame: CGRect(x: axisOriginX, y: axisOriginY, width: CGFloat(lineWidth), height: axisLengthY))
         
-        self.lineHorizontal = UIView(frame: CGRectMake(axisOriginX, axisOriginY, axisLengthX, CGFloat(lineWidth)))
-        self.lineVertical = UIView(frame: CGRectMake(axisOriginX, axisOriginY, CGFloat(lineWidth), axisLengthY))
+        lineHorizontal.backgroundColor = UIColor.black
+        lineVertical.backgroundColor = UIColor.red
         
-        self.lineHorizontal.backgroundColor = UIColor.blackColor()
-        self.lineVertical.backgroundColor = UIColor.redColor()
-        
-        let lineWidthHalf = self.lineWidth / 2
+        let lineWidthHalf = lineWidth / 2
         var targetFrameH = lineHorizontal.frame
         targetFrameH.origin.y = screenLoc.y - CGFloat(lineWidthHalf)
-        self.lineHorizontalTargetFrame = targetFrameH
+        lineHorizontalTargetFrame = targetFrameH
         var targetFrameV = lineVertical.frame
         targetFrameV.origin.x = screenLoc.x - CGFloat(lineWidthHalf)
-        self.lineVerticalTargetFrame = targetFrameV
+        lineVerticalTargetFrame = targetFrameV
  
-        super.init(frame: frame)
+        super.init(frame: chart.bounds)
     }
 
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override public func didMoveToSuperview() {
-        addSubview(self.lineHorizontal)
-        addSubview(self.lineVertical)
+    override open func didMoveToSuperview() {
+        addSubview(lineHorizontal)
+        addSubview(lineVertical)
+
+        func targetState() {
+            lineHorizontal.frame = lineHorizontalTargetFrame
+            lineVertical.frame = lineVerticalTargetFrame
+        }
         
-        UIView.animateWithDuration(NSTimeInterval(self.animDuration), delay: NSTimeInterval(self.animDelay), options: UIViewAnimationOptions.CurveEaseOut, animations: { () -> Void in
-            
-            self.lineHorizontal.frame = self.lineHorizontalTargetFrame
-            self.lineVertical.frame = self.lineVerticalTargetFrame
-            
-            }) { (Bool) -> Void in
+        if animDuration =~ 0 {
+            targetState()
+        } else {
+            UIView.animate(withDuration: TimeInterval(animDuration), delay: TimeInterval(animDelay), options: .curveEaseOut, animations: {
+                targetState()
+            }, completion: nil)
         }
     }
 }

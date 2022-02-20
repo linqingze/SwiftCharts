@@ -8,27 +8,22 @@
 
 import UIKit
 
-public class ChartAxisValueInt: ChartAxisValue {
+open class ChartAxisValueInt: ChartAxisValue {
 
     public let int: Int
-    private let labelSettings: ChartLabelSettings
-    
-    override public var text: String {
-        return "\(self.int)"
-    }
-    
+
     public init(_ int: Int, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
         self.int = int
-        self.labelSettings = labelSettings
-        super.init(scalar: Double(int))
+        super.init(scalar: Double(int), labelSettings: labelSettings)
     }
     
-    override public var labels:[ChartAxisLabel] {
-        let axisLabel = ChartAxisLabel(text: self.text, settings: self.labelSettings)
-        return [axisLabel]
+    override open func copy(_ scalar: Double) -> ChartAxisValueInt {
+        return ChartAxisValueInt(int, labelSettings: labelSettings)
     }
+
+    // MARK: CustomStringConvertible
     
-    override public func copy(scalar: Double) -> ChartAxisValueInt {
-        return ChartAxisValueInt(self.int, labelSettings: self.labelSettings)
+    override open var description: String {
+        return String(int)
     }
 }

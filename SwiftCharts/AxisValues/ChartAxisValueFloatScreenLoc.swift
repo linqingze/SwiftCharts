@@ -8,28 +8,25 @@
 
 import UIKit
 
-@available(*, deprecated=0.2.5, message="use ChartAxisValueDoubleScreenLoc instead")
-public class ChartAxisValueFloatScreenLoc: ChartAxisValueFloat {
+@available(*, deprecated, message: "use ChartAxisValueDoubleScreenLoc instead")
+open class ChartAxisValueFloatScreenLoc: ChartAxisValueFloat {
     
-    private let actualFloat: CGFloat
+    fileprivate let actualFloat: CGFloat
     
     var screenLocFloat: CGFloat {
-        return CGFloat(self.scalar)
+        return CGFloat(scalar)
     }
     
-    override public var text: String {
-        return self.formatter.stringFromNumber(self.actualFloat)!
-    }
-
     // screenLocFloat: model value which will be used to calculate screen position
     // actualFloat: scalar which this axis value really represents
-    public init(screenLocFloat: CGFloat, actualFloat: CGFloat, formatter: NSNumberFormatter = ChartAxisValueFloat.defaultFormatter, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
+    public init(screenLocFloat: CGFloat, actualFloat: CGFloat, formatter: NumberFormatter = ChartAxisValueFloat.defaultFormatter, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
         self.actualFloat = actualFloat
         super.init(screenLocFloat, formatter: formatter, labelSettings: labelSettings)
     }
     
-    override public var labels: [ChartAxisLabel] {
-        let axisLabel = ChartAxisLabel(text: self.text, settings: self.labelSettings)
-        return [axisLabel]
+    // MARK: CustomStringConvertible
+
+    override open var description: String {
+        return self.formatter.string(from: NSNumber(value: Float(actualFloat)))!
     }
 }

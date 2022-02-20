@@ -11,34 +11,34 @@ import SwiftCharts
 
 class CandleStickInteractiveExample: UIViewController {
     
-    private var chart: Chart? // arc
+    fileprivate var chart: Chart? // arc
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         let labelSettings = ChartLabelSettings(font: ExamplesDefaults.labelFont)
         
-        var readFormatter = NSDateFormatter()
+        var readFormatter = DateFormatter()
         readFormatter.dateFormat = "dd.MM.yyyy"
         
-        var displayFormatter = NSDateFormatter()
+        var displayFormatter = DateFormatter()
         displayFormatter.dateFormat = "MMM dd"
         
-        let date = {(str: String) -> NSDate in
-            return readFormatter.dateFromString(str)!
+        let date = {(str: String) -> Date in
+            return readFormatter.date(from: str)!
         }
         
-        let calendar = NSCalendar.currentCalendar()
+        let calendar = Calendar.current
         
-        let dateWithComponents = {(day: Int, month: Int, year: Int) -> NSDate in
-            let components = NSDateComponents()
+        let dateWithComponents = {(day: Int, month: Int, year: Int) -> Date in
+            var components = DateComponents()
             components.day = day
             components.month = month
             components.year = year
-            return calendar.dateFromComponents(components)!
+            return calendar.date(from: components)!
         }
         
-        func filler(date: NSDate) -> ChartAxisValueDate {
+        func filler(_ date: Date) -> ChartAxisValueDate {
             let filler = ChartAxisValueDate(date: date, formatter: displayFormatter)
             filler.hidden = true
             return filler
@@ -73,11 +73,12 @@ class CandleStickInteractiveExample: UIViewController {
             ChartPointCandleStick(date: date("29.10.2015"), formatter: displayFormatter, high: 35, low: 31, open: 31, close: 33)
         ]
         
-        func generateDateAxisValues(month: Int, year: Int) -> [ChartAxisValueDate] {
+        func generateDateAxisValues(_ month: Int, year: Int) -> [ChartAxisValueDate] {
             let date = dateWithComponents(1, month, year)
-            let calendar = NSCalendar.currentCalendar()
-            let monthDays = calendar.rangeOfUnit(.Day, inUnit: .Month, forDate: date)
-            return Array(monthDays.toRange()!).map {day in
+            let calendar = Calendar.current
+            let monthDays = calendar.range(of: .day, in: .month, for: date)!
+
+            return monthDays.map {day in
                 let date = dateWithComponents(day, month, year)
                 let axisValue = ChartAxisValueDate(date: date, formatter: displayFormatter, labelSettings: labelSettings)
                 axisValue.hidden = !(day % 5 == 0)
@@ -86,16 +87,19 @@ class CandleStickInteractiveExample: UIViewController {
         }
         
         let xValues = generateDateAxisValues(10, year: 2015)
-        let yValues = 20.stride(through: 55, by: 5).map {ChartAxisValueFloat(CGFloat($0), labelSettings: labelSettings)}
+        let yValues = stride(from: 20, through: 55, by: 5).map {ChartAxisValueDouble(Double($0), labelSettings: labelSettings)}
         
         let xModel = ChartAxisModel(axisValues: xValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings))
         let yModel = ChartAxisModel(axisValues: yValues, axisTitleLabel: ChartAxisLabel(text: "Axis title", settings: labelSettings.defaultVertical()))
         
-        let defaultChartFrame = ExamplesDefaults.chartFrame(self.view.bounds)
+        let defaultChartFrame = ExamplesDefaults.chartFrame(view.bounds)
         let infoViewHeight: CGFloat = 50
-        let chartFrame = CGRectMake(defaultChartFrame.origin.x, defaultChartFrame.origin.y + infoViewHeight, defaultChartFrame.width, defaultChartFrame.height - infoViewHeight)
-        let coordsSpace = ChartCoordsSpaceRightBottomSingleAxis(chartSettings: ExamplesDefaults.chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
-        let (xAxis, yAxis, innerFrame) = (coordsSpace.xAxis, coordsSpace.yAxis, coordsSpace.chartInnerFrame)
+        let chartFrame = CGRect(x: defaultChartFrame.origin.x, y: defaultChartFrame.origin.y + infoViewHeight, width: defaultChartFrame.width, height: defaultChartFrame.height - infoViewHeight)
+        
+        let chartSettings = ExamplesDefaults.chartSettings
+
+        let coordsSpace = ChartCoordsSpaceRightBottomSingleAxis(chartSettings: chartSettings, chartFrame: chartFrame, xModel: xModel, yModel: yModel)
+        let (xAxisLayer, yAxisLayer, innerFrame) = (coordsSpace.xAxisLayer, coordsSpace.yAxisLayer, coordsSpace.chartInnerFrame)
         
         let viewGenerator = {(chartPointModel: ChartPointLayerModel<ChartPointCandleStick>, layer: ChartPointsViewsLayer<ChartPointCandleStick, ChartCandleStickView>, chart: Chart) -> ChartCandleStickView? in
             let (chartPoint, screenLoc) = (chartPointModel.chartPoint, chartPointModel.screenLoc)
@@ -107,38 +111,40 @@ class CandleStickInteractiveExample: UIViewController {
             let openScreenY = layer.modelLocToScreenLoc(x: Double(x), y: Double(chartPoint.open)).y
             let closeScreenY = layer.modelLocToScreenLoc(x: Double(x), y: Double(chartPoint.close)).y
             
-            let (rectTop, rectBottom, fillColor) = closeScreenY < openScreenY ? (closeScreenY, openScreenY, UIColor.whiteColor()) : (openScreenY, closeScreenY, UIColor.blackColor())
+            let (rectTop, rectBottom, fillColor) = closeScreenY < openScreenY ? (closeScreenY, openScreenY, UIColor.white) : (openScreenY, closeScreenY, UIColor.black)
             let v = ChartCandleStickView(lineX: screenLoc.x, width: Env.iPad ? 10 : 5, top: highScreenY, bottom: lowScreenY, innerRectTop: rectTop, innerRectBottom: rectBottom, fillColor: fillColor, strokeWidth: Env.iPad ? 1 : 0.5)
-            v.userInteractionEnabled = false
+            v.isUserInteractionEnabled = false
             return v
         }
-        let candleStickLayer = ChartPointsCandleStickViewsLayer<ChartPointCandleStick, ChartCandleStickView>(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: chartPoints, viewGenerator: viewGenerator)
+        let candleStickLayer = ChartPointsCandleStickViewsLayer<ChartPointCandleStick, ChartCandleStickView>(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, innerFrame: innerFrame, chartPoints: chartPoints, viewGenerator: viewGenerator)
         
         
-        let infoView = InfoWithIntroView(frame: CGRectMake(10, 70, self.view.frame.size.width, infoViewHeight))
-        self.view.addSubview(infoView)
+        let infoView = InfoWithIntroView(frame: CGRect(x: 10, y: 70, width: view.frame.size.width, height: infoViewHeight))
+        view.addSubview(infoView)
         
-        let trackerLayer = ChartPointsTrackerLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: chartPoints, locChangedFunc: {[weak candleStickLayer, weak infoView] screenLoc in
+        let trackerLayer = ChartPointsTrackerLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: chartPoints, locChangedFunc: {[weak candleStickLayer, weak infoView] screenLoc in
             candleStickLayer?.highlightChartpointView(screenLoc: screenLoc)
             if let chartPoint = candleStickLayer?.chartPointsForScreenLocX(screenLoc.x).first {
                 infoView?.showChartPoint(chartPoint)
             } else {
                 infoView?.clear()
             }
-        }, lineColor: UIColor.redColor(), lineWidth: Env.iPad ? 1 : 0.6)
+        }, lineColor: UIColor.red, lineWidth: Env.iPad ? 1 : 0.6)
         
         
-        let settings = ChartGuideLinesLayerSettings(linesColor: UIColor.blackColor(), linesWidth: ExamplesDefaults.guidelinesWidth)
-        let guidelinesLayer = ChartGuideLinesLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, settings: settings, onlyVisibleX: true)
+        let settings = ChartGuideLinesLayerSettings(linesColor: UIColor.black, linesWidth: ExamplesDefaults.guidelinesWidth)
+        let guidelinesLayer = ChartGuideLinesLayer(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, settings: settings)
         
-        let dividersSettings =  ChartDividersLayerSettings(linesColor: UIColor.blackColor(), linesWidth: ExamplesDefaults.guidelinesWidth, start: Env.iPad ? 7 : 3, end: 0, onlyVisibleValues: true)
-        let dividersLayer = ChartDividersLayer(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, settings: dividersSettings)
+        let dividersSettings =  ChartDividersLayerSettings(linesColor: UIColor.black, linesWidth: ExamplesDefaults.guidelinesWidth, start: Env.iPad ? 7 : 3, end: 0)
+        let dividersLayer = ChartDividersLayer(xAxisLayer: xAxisLayer, yAxisLayer: yAxisLayer, settings: dividersSettings)
         
         let chart = Chart(
             frame: chartFrame,
+            innerFrame: innerFrame,
+            settings: chartSettings,
             layers: [
-                xAxis,
-                yAxis,
+                xAxisLayer,
+                yAxisLayer,
                 guidelinesLayer,
                 dividersLayer,
                 candleStickLayer,
@@ -146,7 +152,7 @@ class CandleStickInteractiveExample: UIViewController {
             ]
         )
         
-        self.view.addSubview(chart.view)
+        view.addSubview(chart.view)
         self.chart = chart
     }
     
@@ -173,68 +179,68 @@ private class InfoView: UIView {
         let itemHeight: CGFloat = 40
         let y = (frame.height - itemHeight) / CGFloat(2)
         
-        self.statusView = UIView(frame: CGRectMake(0, y, itemHeight, itemHeight))
-        self.statusView.layer.borderColor = UIColor.blackColor().CGColor
-        self.statusView.layer.borderWidth = 1
-        self.statusView.layer.cornerRadius = Env.iPad ? 13 : 8
+        statusView = UIView(frame: CGRect(x: 0, y: y, width: itemHeight, height: itemHeight))
+        statusView.layer.borderColor = UIColor.black.cgColor
+        statusView.layer.borderWidth = 1
+        statusView.layer.cornerRadius = Env.iPad ? 13 : 8
         
         let font = ExamplesDefaults.labelFont
         
-        self.dateLabel = UILabel()
-        self.dateLabel.font = font
+        dateLabel = UILabel()
+        dateLabel.font = font
         
-        self.lowTextLabel = UILabel()
-        self.lowTextLabel.text = "Low:"
-        self.lowTextLabel.font = font
-        self.lowLabel = UILabel()
-        self.lowLabel.font = font
+        lowTextLabel = UILabel()
+        lowTextLabel.text = "Low:"
+        lowTextLabel.font = font
+        lowLabel = UILabel()
+        lowLabel.font = font
         
-        self.highTextLabel = UILabel()
-        self.highTextLabel.text = "High:"
-        self.highTextLabel.font = font
-        self.highLabel = UILabel()
-        self.highLabel.font = font
+        highTextLabel = UILabel()
+        highTextLabel.text = "High:"
+        highTextLabel.font = font
+        highLabel = UILabel()
+        highLabel.font = font
         
-        self.openTextLabel = UILabel()
-        self.openTextLabel.text = "Open:"
-        self.openTextLabel.font = font
-        self.openLabel = UILabel()
-        self.openLabel.font = font
+        openTextLabel = UILabel()
+        openTextLabel.text = "Open:"
+        openTextLabel.font = font
+        openLabel = UILabel()
+        openLabel.font = font
         
-        self.closeTextLabel = UILabel()
-        self.closeTextLabel.text = "Close:"
-        self.closeTextLabel.font = font
-        self.closeLabel = UILabel()
-        self.closeLabel.font = font
+        closeTextLabel = UILabel()
+        closeTextLabel.text = "Close:"
+        closeTextLabel.font = font
+        closeLabel = UILabel()
+        closeLabel.font = font
         
         super.init(frame: frame)
         
-        self.addSubview(self.statusView)
-        self.addSubview(self.dateLabel)
-        self.addSubview(self.lowTextLabel)
-        self.addSubview(self.lowLabel)
-        self.addSubview(self.highTextLabel)
-        self.addSubview(self.highLabel)
-        self.addSubview(self.openTextLabel)
-        self.addSubview(self.openLabel)
-        self.addSubview(self.closeTextLabel)
-        self.addSubview(self.closeLabel)
+        addSubview(statusView)
+        addSubview(dateLabel)
+        addSubview(lowTextLabel)
+        addSubview(lowLabel)
+        addSubview(highTextLabel)
+        addSubview(highLabel)
+        addSubview(openTextLabel)
+        addSubview(openLabel)
+        addSubview(closeTextLabel)
+        addSubview(closeLabel)
     }
     
-    private override func didMoveToSuperview() {
+    fileprivate override func didMoveToSuperview() {
         
-        let views = [self.statusView, self.dateLabel, self.highTextLabel, self.highLabel, self.lowTextLabel, self.lowLabel, self.openTextLabel, self.openLabel, self.closeTextLabel, self.closeLabel]
+        let views = [statusView, dateLabel, highTextLabel, highLabel, lowTextLabel, lowLabel, openTextLabel, openLabel, closeTextLabel, closeLabel]
         for v in views {
             v.translatesAutoresizingMaskIntoConstraints = false
         }
         
-        let namedViews = views.enumerate().map{index, view in
+        let namedViews = views.enumerated().map{index, view in
             ("v\(index)", view)
         }
         
-        let viewsDict = namedViews.reduce(Dictionary<String, UIView>()) {(var u, tuple) in
-            u[tuple.0] = tuple.1
-            return u
+        var viewsDict = Dictionary<String, UIView>()
+        for namedView in namedViews {
+            viewsDict[namedView.0] = namedView.1
         }
         
         let circleDiameter: CGFloat = Env.iPad ? 26 : 15
@@ -244,9 +250,9 @@ private class InfoView: UIView {
             "\(str)-(\(labelsSpace))-[\(tuple.0)]"
         }
         
-        let vConstraits = namedViews.flatMap {NSLayoutConstraint.constraintsWithVisualFormat("V:|-(18)-[\($0.0)(\(circleDiameter))]", options: NSLayoutFormatOptions(), metrics: nil, views: viewsDict)}
+        let vConstraits = namedViews.flatMap {NSLayoutConstraint.constraints(withVisualFormat: "V:|-(18)-[\($0.0)(\(circleDiameter))]", options: NSLayoutConstraint.FormatOptions(), metrics: nil, views: viewsDict)}
         
-        self.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat(hConstraintStr, options: NSLayoutFormatOptions(), metrics: nil, views: viewsDict)
+        addConstraints(NSLayoutConstraint.constraints(withVisualFormat: hConstraintStr, options: NSLayoutConstraint.FormatOptions(), metrics: nil, views: viewsDict)
             + vConstraits)
         
     }
@@ -255,18 +261,18 @@ private class InfoView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func showChartPoint(chartPoint: ChartPointCandleStick) {
-        let color = chartPoint.open > chartPoint.close ? UIColor.blackColor() : UIColor.whiteColor()
-        self.statusView.backgroundColor = color
-        self.dateLabel.text = chartPoint.x.labels.first?.text ?? ""
-        self.lowLabel.text = "\(chartPoint.low)"
-        self.highLabel.text = "\(chartPoint.high)"
-        self.openLabel.text = "\(chartPoint.open)"
-        self.closeLabel.text = "\(chartPoint.close)"
+    func showChartPoint(_ chartPoint: ChartPointCandleStick) {
+        let color = chartPoint.open > chartPoint.close ? UIColor.black : UIColor.white
+        statusView.backgroundColor = color
+        dateLabel.text = chartPoint.x.labels.first?.text ?? ""
+        lowLabel.text = "\(chartPoint.low)"
+        highLabel.text = "\(chartPoint.high)"
+        openLabel.text = "\(chartPoint.open)"
+        closeLabel.text = "\(chartPoint.close)"
     }
     
     func clear() {
-        self.statusView.backgroundColor = UIColor.clearColor()
+        statusView.backgroundColor = UIColor.clear
     }
 }
 
@@ -280,37 +286,37 @@ private class InfoWithIntroView: UIView {
         super.init(frame: frame)
     }
     
-    private override func didMoveToSuperview() {
-        let label = UILabel(frame: CGRectMake(0, self.bounds.origin.y, self.bounds.width, self.bounds.height))
+    fileprivate override func didMoveToSuperview() {
+        let label = UILabel(frame: CGRect(x: 0, y: bounds.origin.y, width: bounds.width, height: bounds.height))
         label.text = "Drag the line to see chartpoint data"
         label.font = ExamplesDefaults.labelFont
-        label.backgroundColor = UIColor.whiteColor()
-        self.introView = label
+        label.backgroundColor = UIColor.white
+        introView = label
         
-        self.infoView = InfoView(frame: self.bounds)
+        infoView = InfoView(frame: bounds)
         
-        self.addSubview(self.infoView)
-        self.addSubview(self.introView)
+        addSubview(infoView)
+        addSubview(introView)
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func animateIntroAlpha(alpha: CGFloat) {
-        UIView.animateWithDuration(0.1, animations: {
+    fileprivate func animateIntroAlpha(_ alpha: CGFloat) {
+        UIView.animate(withDuration: 0.1, animations: {
             self.introView.alpha = alpha
         })
     }
     
-    func showChartPoint(chartPoint: ChartPointCandleStick) {
-        self.animateIntroAlpha(0)
-        self.infoView.showChartPoint(chartPoint)
+    func showChartPoint(_ chartPoint: ChartPointCandleStick) {
+        animateIntroAlpha(0)
+        infoView.showChartPoint(chartPoint)
     }
     
     func clear() {
-        self.animateIntroAlpha(1)
-        self.infoView.clear()
+        animateIntroAlpha(1)
+        infoView.clear()
     }
 }
         

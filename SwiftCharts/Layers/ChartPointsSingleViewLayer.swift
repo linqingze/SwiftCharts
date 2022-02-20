@@ -9,30 +9,36 @@
 import UIKit
 
 // Layer that shows only one view at a time
-public class ChartPointsSingleViewLayer<T: ChartPoint, U: UIView>: ChartPointsViewsLayer<T, U> {
+open class ChartPointsSingleViewLayer<T: ChartPoint, U: UIView>: ChartPointsViewsLayer<T, U> {
     
-    private var addedViews: [UIView] = []
+    fileprivate var addedViews: [UIView] = []
+
+    fileprivate var activeChartPoint: T?
     
-    public init(xAxis: ChartAxisLayer, yAxis: ChartAxisLayer, innerFrame: CGRect, chartPoints: [T], viewGenerator: ChartPointViewGenerator) {
-        super.init(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: chartPoints, viewGenerator: viewGenerator)
+    public init(xAxis: ChartAxis, yAxis: ChartAxis, innerFrame: CGRect, chartPoints: [T], viewGenerator: @escaping ChartPointViewGenerator, mode: ChartPointsViewsLayerMode = .scaleAndTranslate, keepOnFront: Bool = true) {
+        super.init(xAxis: xAxis, yAxis: yAxis, chartPoints: chartPoints, viewGenerator: viewGenerator, mode: mode, keepOnFront: keepOnFront)
     }
 
-    override func display(chart chart: Chart) {
+    override open func display(chart: Chart) {
         // skip adding views - this layer manages its own list
     }
     
-    public func showView(chartPoint chartPoint: T, chart: Chart) {
+    open func showView(chartPoint: T, chart: Chart) {
+    
+        activeChartPoint = chartPoint
         
-        for view in self.addedViews {
+        for view in addedViews {
             view.removeFromSuperview()
         }
         
-        let screenLoc = self.chartPointScreenLoc(chartPoint)
-        let index = self.chartPointsModels.map{$0.chartPoint}.indexOf(chartPoint)!
+        let screenLoc = chartPointScreenLoc(chartPoint)
+        let index = chartPointsModels.map{$0.chartPoint}.firstIndex(of: chartPoint)!
         let model: ChartPointLayerModel = ChartPointLayerModel(chartPoint: chartPoint, index: index, screenLoc: screenLoc)
-        if let view = self.viewGenerator(chartPointModel: model, layer: self, chart: chart) {
-            self.addedViews.append(view)
-            chart.addSubview(view)
+        if let view = viewGenerator(model, self, chart) {
+            addedViews.append(view)
+            addSubview(chart, view: view)
+            
+            viewsWithChartPoints = [ViewWithChartPoint(view: view, chartPointModel: model)]
         }
     }
 }

@@ -8,33 +8,39 @@
 
 import UIKit
 
-public class ChartAxisValueDate: ChartAxisValue {
+open class ChartAxisValueDate: ChartAxisValue {
   
-    private let formatter: NSDateFormatter
-    private let labelSettings: ChartLabelSettings
-    
-    public var date: NSDate {
-        return ChartAxisValueDate.dateFromScalar(self.scalar)
+    fileprivate let formatter: (Date) -> String
+
+    open var date: Date {
+        return ChartAxisValueDate.dateFromScalar(scalar)
     }
-    
-    public init(date: NSDate, formatter: NSDateFormatter, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
+
+    public init(date: Date, formatter: @escaping (Date) -> String, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
         self.formatter = formatter
-        self.labelSettings = labelSettings
-        super.init(scalar: ChartAxisValueDate.scalarFromDate(date))
+        super.init(scalar: ChartAxisValueDate.scalarFromDate(date), labelSettings: labelSettings)
+    }
+
+    convenience public init(date: Date, formatter: DateFormatter, labelSettings: ChartLabelSettings = ChartLabelSettings()) {
+        self.init(date: date, formatter: { formatter.string(from: $0) }, labelSettings: labelSettings)
     }
     
-    override public var labels: [ChartAxisLabel] {
-        let axisLabel = ChartAxisLabel(text: self.formatter.stringFromDate(self.date), settings: self.labelSettings)
-        axisLabel.hidden = self.hidden
-        return [axisLabel]
+    open class func dateFromScalar(_ scalar: Double) -> Date {
+        return Date(timeIntervalSince1970: TimeInterval(scalar))
     }
     
-    public class func dateFromScalar(scalar: Double) -> NSDate {
-        return NSDate(timeIntervalSince1970: NSTimeInterval(scalar))
-    }
-    
-    public class func scalarFromDate(date: NSDate) -> Double {
+    open class func scalarFromDate(_ date: Date) -> Double {
         return Double(date.timeIntervalSince1970)
+    }
+
+    // MARK: CustomStringConvertible
+
+    override open var description: String {
+        return formatter(date)
+    }
+    
+    open override func copy(_ scalar: Double) -> ChartAxisValue {
+        return ChartAxisValueDate(date: ChartAxisValueDate.dateFromScalar(scalar), formatter: formatter, labelSettings: labelSettings)
     }
 }
 

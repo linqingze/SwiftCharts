@@ -9,19 +9,37 @@
 import UIKit
 
 public protocol ChartAxisLayer: ChartLayer {
-        
-    var p1: CGPoint {get}
-    var p2: CGPoint {get}
-    var axisValues: [ChartAxisValue] {get}
-    var rect: CGRect {get}
+
+    // Axis, used to map between model values and screen locations
+    var axis: ChartAxis {get}
+
+    var tapSettings: ChartAxisLayerTapSettings? {get set}
+    
+    var labelsGenerator: ChartAxisLabelsGenerator {get set}
+    
+    /// Displayed axis values
+    var currentAxisValues: [Double] {get}
+    
+    /// The frame of the layer. This includes title, labels and line, and takes into account possible rotation and spacing settings.
+    var frame: CGRect {get}
+
+    var frameWithoutLabels: CGRect {get}
+    
+    /// Screen locations of current axis values
     var axisValuesScreenLocs: [CGFloat] {get}
-    var visibleAxisValuesScreenLocs: [CGFloat] {get}
+
+    /// The axis values with their respective frames relative to the chart's view
+    var axisValuesWithFrames: [(axisValue: Double, frames: [CGRect])] {get}
+
+    /// The smallest screen distance between axis values
     var minAxisScreenSpace: CGFloat {get}
-    var length: CGFloat {get}
-    var modelLength: CGFloat {get}
+
+    /// Whether the axis is low (leading or bottom) or high (trailing or top)
     var low: Bool {get}
+
     var lineP1: CGPoint {get}
     var lineP2: CGPoint {get}
     
-    func screenLocForScalar(scalar: Double) -> CGFloat
+    /// If the axis frame should (incrementally) affect the inner frame size of the chart
+    var canChangeFrameSize: Bool {set get}
 }

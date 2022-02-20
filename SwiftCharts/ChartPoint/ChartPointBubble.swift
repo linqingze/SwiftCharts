@@ -8,12 +8,12 @@
 
 import UIKit
 
-public class ChartPointBubble: ChartPoint {
+open class ChartPointBubble: ChartPoint {
     public let diameterScalar: Double
     public let bgColor: UIColor
     public let borderColor: UIColor
     
-    public init(x: ChartAxisValue, y: ChartAxisValue, diameterScalar: Double, bgColor: UIColor, borderColor: UIColor = UIColor.blackColor()) {
+    public init(x: ChartAxisValue, y: ChartAxisValue, diameterScalar: Double, bgColor: UIColor, borderColor: UIColor = UIColor.black) {
         self.diameterScalar = diameterScalar
         self.bgColor = bgColor
         self.borderColor = borderColor

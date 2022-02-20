@@ -8,39 +8,40 @@
 
 import UIKit
 
-public class ChartPointsTrackerLayer<T: ChartPoint>: ChartPointsLayer<T> {
+open class ChartPointsTrackerLayer<T: ChartPoint>: ChartPointsLayer<T> {
    
-    private var view: TrackerView?
-    private let locChangedFunc: ((CGPoint) -> ())
+    fileprivate var view: TrackerView?
+    fileprivate let locChangedFunc: ((CGPoint) -> ())
 
-    private let lineColor: UIColor
-    private let lineWidth: CGFloat
+    fileprivate let lineColor: UIColor
+    fileprivate let lineWidth: CGFloat
     
-    private lazy var currentPositionLineOverlay: UIView = {
+    fileprivate lazy private(set) var currentPositionLineOverlay: UIView = {
         let currentPositionLineOverlay = UIView()
         currentPositionLineOverlay.backgroundColor = self.lineColor
         return currentPositionLineOverlay
     }()
     
     
-    public init(xAxis: ChartAxisLayer, yAxis: ChartAxisLayer, innerFrame: CGRect, chartPoints: [T], locChangedFunc: (CGPoint) -> (), lineColor: UIColor = UIColor.blackColor(), lineWidth: CGFloat = 1) {
+    public init(xAxis: ChartAxis, yAxis: ChartAxis, chartPoints: [T], locChangedFunc: @escaping (CGPoint) -> (), lineColor: UIColor = UIColor.black, lineWidth: CGFloat = 1) {
         self.locChangedFunc = locChangedFunc
         self.lineColor = lineColor
         self.lineWidth = lineWidth
-        super.init(xAxis: xAxis, yAxis: yAxis, innerFrame: innerFrame, chartPoints: chartPoints)
+        super.init(xAxis: xAxis, yAxis: yAxis, chartPoints: chartPoints)
     }
     
-    override func display(chart chart: Chart) {
+    open override func display(chart: Chart) {
         let view = TrackerView(frame: chart.bounds, updateFunc: {[weak self] location in
             self?.locChangedFunc(location)
             self?.currentPositionLineOverlay.center.x = location.x
         })
-        view.userInteractionEnabled = true
+        view.isUserInteractionEnabled = true
         chart.addSubview(view)
         self.view = view
         
-        view.addSubview(self.currentPositionLineOverlay)
-        self.currentPositionLineOverlay.frame = CGRectMake(self.innerFrame.origin.x + 200 - self.lineWidth / 2, self.innerFrame.origin.y, self.lineWidth, self.innerFrame.height)
+        view.addSubview(currentPositionLineOverlay)
+        
+        currentPositionLineOverlay.frame = CGRect(x: chart.containerFrame.origin.x + 200 - lineWidth / 2, y: modelLocToScreenLoc(y: yAxis.last), width: lineWidth, height: modelLocToScreenLoc(y: yAxis.first))
     }
 }
 
@@ -49,7 +50,7 @@ private class TrackerView: UIView {
     
     let updateFunc: ((CGPoint) -> ())?
     
-    init(frame: CGRect, updateFunc: (CGPoint) -> ()) {
+    init(frame: CGRect, updateFunc: @escaping (CGPoint) -> ()) {
         self.updateFunc = updateFunc
         
         super.init(frame: frame)
@@ -59,16 +60,16 @@ private class TrackerView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         let touch = touches.first!
-        let location = touch.locationInView(self)
+        let location = touch.location(in: self)
         
         self.updateFunc?(location)
     }
     
-    override func touchesMoved(touches: Set<UITouch>, withEvent event: UIEvent?) {
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         let touch = touches.first!
-        let location = touch.locationInView(self)
+        let location = touch.location(in: self)
         
         self.updateFunc?(location)
     }
