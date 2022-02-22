@@ -13,12 +13,13 @@ open class ChartAreasView: UIView {
     fileprivate let animDuration: Float
     fileprivate let animDelay: Float
     fileprivate let addContainerPoints: Bool
-    
-    public init(points: [CGPoint], frame: CGRect, colors: [UIColor], animDuration: Float, animDelay: Float, addContainerPoints: Bool, pathGenerator: ChartLinesViewPathGenerator) {
+    fileprivate let start: CGFloat
+
+    public init(points: [CGPoint], frame: CGRect, colors: [UIColor], animDuration: Float, animDelay: Float, addContainerPoints: Bool, pathGenerator: ChartLinesViewPathGenerator, start:CGFloat = 0) {
         self.animDuration = animDuration
         self.animDelay = animDelay
         self.addContainerPoints = addContainerPoints
-        
+        self.start = start
         super.init(frame: frame)
 
         backgroundColor = UIColor.clear
@@ -58,14 +59,14 @@ open class ChartAreasView: UIView {
         shape.fillColor = nil
         
         let gradient = CAGradientLayer()
-        gradient.frame = shape.bounds
+        gradient.frame = CGRect(x:  start, y: bounds.origin.y, width: shape.frame.size.width, height: shape.frame.size.height)
         gradient.colors = gradientColors.map{$0.cgColor}
         
         let mask = CAShapeLayer()
-        mask.frame = self.bounds
+        mask.frame = CGRect(x:  -start, y: 0, width: self.bounds.width, height: self.bounds.width)
         
         if addContainerPoints {
-            path.addLine(to: CGPoint(x: shape.frame.size.width, y: shape.frame.size.height))
+            path.addLine(to: CGPoint(x: shape.frame.size.width + start, y: shape.frame.size.height))
             path.addLine(to: CGPoint(x: 0, y: shape.frame.size.height))
             path.close()
         }

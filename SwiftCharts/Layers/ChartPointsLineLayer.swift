@@ -91,7 +91,7 @@ open class ChartPointsLineLayer<T: ChartPoint>: ChartPointsLayer<T> {
     
     fileprivate var isInTransform = false
     
-    public init(xAxis: ChartAxis, yAxis: ChartAxis, lineModels: [ChartLineModel<T>], pathGenerator: ChartLinesViewPathGenerator = StraightLinePathGenerator(), displayDelay: Float = 0, useView: Bool = true, delayInit: Bool = false) {
+    public init(xAxis: ChartAxis, yAxis: ChartAxis, lineModels: [ChartLineModel<T>], pathGenerator: ChartLinesViewPathGenerator = StraightLinePathGenerator(), displayDelay: Float = 0, useView: Bool = true, delayInit: Bool = false, drawArea: Bool = false ,areaColors: [UIColor]? = nil) {
         self.lineModels = lineModels
         self.pathGenerator = pathGenerator
         self.useView = useView
